@@ -3,7 +3,7 @@ use std::net::TcpListener;
 use actix_web::{dev::Server, web, App, HttpServer};
 use tracing_actix_web::TracingLogger;
 
-use crate::{configuration::Settings, routes::health_check};
+use crate::{configuration::Settings, routes::{health_check, stream}};
 
 pub struct Application {
     port: u16,
@@ -48,7 +48,7 @@ async fn run(
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
-            // .route("/", web::get().to(home))
+            .route("/{filename}", web::get().to(stream))
             .route("/health_check", web::get().to(health_check))
             .app_data(base_url.clone())
     })
