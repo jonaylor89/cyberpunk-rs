@@ -22,10 +22,10 @@ pub fn concat(file1: &str, file2: &str) -> String {
             "./testdata/concat.mp3",
         ])
         .spawn()
-        .expect("command failed to run");
+        .expect("concat command failed to run");
 
     let status = output.wait();
-    tracing::info!("{}", status.unwrap());
+    tracing::info!("concat transformation completed: {}", status.unwrap());
 
     return "concat.mp3".into()
 }

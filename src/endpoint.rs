@@ -16,7 +16,7 @@ impl<'endpoint> Endpoint<'_> {
     pub fn new() -> Self {
         Endpoint {
             audio: "",
-            pipeline: vec!(),
+            pipeline: vec![],
         }
     }
 
