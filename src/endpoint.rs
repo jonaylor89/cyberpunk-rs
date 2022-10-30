@@ -20,6 +20,7 @@ impl<'endpoint> Endpoint<'_> {
         }
     }
 
+    #[tracing::instrument]
     pub fn process(&self) -> Result<(), String> {
         for transformation in &self.pipeline {
             let output = match transformation {
