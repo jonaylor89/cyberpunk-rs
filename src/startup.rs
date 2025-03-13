@@ -201,8 +201,8 @@ async fn handler(
     }
 
     // TODO: add config in the config to allow/disallow fetching audios from the internet
-    let blob = if audio.starts_with("https://") || audio.starts_with("http://") {
-        let raw_bytes = reqwest::get(audio)
+    let blob = if params.audio.starts_with("https://") || params.audio.starts_with("http://") {
+        let raw_bytes = reqwest::get(&params.audio)
             .await
             .map_err(|e| {
                 (
@@ -229,7 +229,7 @@ async fn handler(
             content_type,
         }
     } else {
-        state.storage.get(audio).await.map_err(|e| {
+        state.storage.get(&params.audio).await.map_err(|e| {
             (
                 StatusCode::NOT_FOUND,
                 format!("Failed to fetch audio: {}", e),
