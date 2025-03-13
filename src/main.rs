@@ -1,25 +1,38 @@
-use cyberpunk::{
-    endpoint::{Endpoint, Transformation},
-    telemetry::{get_subscriber, init_subscriber}, configuration::get_configuration, startup::Application,
-};
+use color_eyre::Result;
+use cyberpunk::config::get_configuration;
+use cyberpunk::startup::Application;
+use cyberpunk::telemetry::{get_subscriber, init_subscriber};
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let subscriber = get_subscriber("cyberpunk".into(), "info".into(), std::io::stdout);
+async fn main() -> Result<()> {
+    color_eyre::install()?;
+    let parse_dotenv = dotenvy::dotenv();
+    if let Err(e) = parse_dotenv {
+        tracing::warn!("failed to parse .env file: {}", e);
+    }
+
+    let configuration = get_configuration()
+        .inspect_err(|e| tracing::error!("Failed to load configuration: {}", e))
+        .expect("Failed to read configuration");
+
+    let subscriber = get_subscriber("cyberpunk".into(), "debug".into(), std::io::stdout);
     init_subscriber(subscriber);
 
-    let configuration = get_configuration().expect("Failed to read configuration");
+    let app = Application::build(configuration).await?;
+    let outcome = app.run_until_stopped().await;
 
-    let application = Application::build(configuration.clone()).await?;
-    application.run_until_stopped().await?;
-
-    let mut endpoint = Endpoint::new();
-    endpoint.audio = "celtic_pt2.mp3";
-
-    let transaction = Transformation::Concat("reversed_celtic_pt2.mp3".to_string());
-    endpoint.pipeline.push(transaction);
-
-    endpoint.process().unwrap();
+    match outcome {
+        Ok(()) => {
+            tracing::info!("server has exited")
+        }
+        Err(e) => {
+            tracing::error!(
+                error.cause_chain = ?e,
+                error.message = %e,
+                "server failed",
+            )
+        }
+    }
 
     Ok(())
 }
