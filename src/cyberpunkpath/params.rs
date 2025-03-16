@@ -14,6 +14,8 @@ use nom::{error::VerboseError, IResult};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
+use crate::blob::AudioFormat;
+
 #[derive(Debug)]
 pub struct CyberpunkPath {
     pub path: String,
@@ -71,7 +73,7 @@ pub struct Params {
 
     // Audio Format
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub format: Option<String>,
+    pub format: Option<AudioFormat>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub codec: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -185,7 +187,10 @@ impl Params {
         for (key, values) in query {
             if let Some(value) = values.first() {
                 match key.as_str() {
-                    "format" => params.format = Some(value.to_string()),
+                    "format" => {
+                        params.format =
+                            Some(value.parse::<AudioFormat>().unwrap_or(AudioFormat::Mp3))
+                    }
                     "codec" => params.codec = Some(value.to_string()),
                     "sample_rate" => params.sample_rate = value.parse().ok(),
                     "channels" => params.channels = value.parse().ok(),
@@ -483,7 +488,7 @@ mod tests {
     fn test_params_display() {
         let params = Params {
             audio: "test.mp3".to_string(),
-            format: Some("mp3".to_string()),
+            format: Some(AudioFormat::Mp3),
             quality: Some(0.5),
             ..Default::default()
         };

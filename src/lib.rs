@@ -1,3 +1,4 @@
+pub mod blob;
 pub mod cache;
 pub mod config;
 pub mod cyberpunkpath;
@@ -7,4 +8,5 @@ pub mod processor;
 pub mod startup;
 pub mod state;
 pub mod storage;
+pub mod tags;
 pub mod telemetry;

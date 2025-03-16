@@ -9,12 +9,6 @@ pub trait AudioStorage: Send + Sync {
     async fn delete(&self, key: &str) -> Result<()>;
 }
 
-// #[derive(Debug)]
-// pub struct Stat {
-//     pub size: u64,
-//     pub modified: Option<time::SystemTime>,
-// }
-
 #[derive(Debug)]
 pub struct Blob {
     pub data: Vec<u8>,

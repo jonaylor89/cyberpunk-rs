@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use secrecy::SecretString;
 use serde::Deserialize;
 use serde_aux::prelude::deserialize_number_from_string;
@@ -9,6 +11,7 @@ use crate::cyberpunkpath::normalize::SafeCharsType;
 #[serde(default)]
 pub struct Settings {
     pub application: ApplicationSettings,
+    pub custom_tags: HashMap<String, String>,
     pub processor: ProcessorSettings,
     pub storage: StorageSettings,
     pub cache: CacheSettings,
@@ -36,21 +39,14 @@ impl Default for ApplicationSettings {
 #[derive(serde::Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct ProcessorSettings {
-    pub disable_blur: bool,
     pub disabled_filters: Vec<String>,
     pub max_filter_ops: usize,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub concurrency: Option<i32>,
+    pub concurrency: Option<usize>,
     pub max_cache_files: i32,
     pub max_cache_mem: i32,
     pub max_cache_size: i32,
-    pub max_width: i32,
-    pub max_height: i32,
-    pub max_resolution: i32,
-    pub max_animation_frames: usize,
-    pub strip_metadata: bool,
-    pub avif_speed: i32,
 }
 
 #[derive(Deserialize, Clone, Default)]

@@ -28,7 +28,7 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::task;
 use tower_http::trace::TraceLayer;
-use tracing::{info, info_span, warn};
+use tracing::{debug, info, info_span, instrument, warn};
 
 pub struct Application {
     pub port: u16,
@@ -161,13 +161,13 @@ where
         )
         .with_state(state);
 
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    debug!("listening on {}", listener.local_addr().unwrap());
     let server = axum::serve(listener, app);
 
     Ok(server)
 }
 
-#[tracing::instrument(skip(state))]
+#[instrument(skip(state))]
 async fn handler(
     State(state): State<AppStateDyn>,
     params: Params,
@@ -186,7 +186,7 @@ async fn handler(
     // TODO: check result bucket for audio and serve if found
     let params_hash = suffix_result_storage_hasher(&params);
     let result = state.storage.get(&params_hash).await.inspect_err(|_| {
-        tracing::info!("no audio in results storage: {}", &params);
+        info!("no audio in results storage: {}", &params);
     });
     if let Ok(blob) = result {
         return Response::builder()
