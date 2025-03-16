@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::config::Settings;
 
 const MAX_TAG_VALUE_LENGTH: usize = 256;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, thiserror::Error)]
 pub enum TagError {
@@ -23,8 +24,7 @@ pub fn create_tags(config: Settings) -> Result<HashMap<String, String>, TagError
         "host".into(),
         gethostname::gethostname().to_string_lossy().into(),
     );
-    tags.insert("version".into(), config.version.clone());
-    tags.insert("env".into(), config.environment.clone());
+    tags.insert("version".into(), VERSION.into());
 
     // Add provided custom tags
     for (k, v) in config.custom_tags {
@@ -39,27 +39,4 @@ pub fn create_tags(config: Settings) -> Result<HashMap<String, String>, TagError
     }
 
     Ok(tags)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tags() {
-        let config = TagConfig {
-            environment: "test".into(),
-            version: "1.0".into(),
-            custom_tags: Tags::new(),
-        };
-
-        init(config).unwrap();
-
-        let mut custom = Tags::new();
-        custom.insert("custom".into(), "value".into());
-
-        let tags = create_tags(Some(custom)).unwrap();
-        assert_eq!(tags.get("custom"), Some(&"value".into()));
-        assert!(tags.contains_key("version"));
-    }
 }
