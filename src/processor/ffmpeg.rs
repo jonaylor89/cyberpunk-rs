@@ -24,7 +24,7 @@ pub async fn process_audio(
         .join(format!("out.{}", output_format.extension()));
 
     // Write input file
-    tokio::fs::write(&input_path, input.as_bytes()).await?;
+    tokio::fs::write(&input_path, input.as_ref()).await?;
 
     // Build FFmpeg command
     let mut cmd = Command::new("ffmpeg");

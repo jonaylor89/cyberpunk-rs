@@ -30,7 +30,7 @@ impl AudioProcessor for Processor {
 
         let temp_dir = TempDir::new()?;
 
-        let processed_audio = process_audio(blob, &params, temp_dir).await?;
+        let processed_audio = process_audio(blob, params, temp_dir).await?;
         info!("Audio processing completed successfully");
 
         Ok(processed_audio)

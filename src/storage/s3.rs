@@ -47,7 +47,7 @@ impl AudioStorage for S3Storage {
             .put_object()
             .bucket(&self.bucket)
             .key(full_path)
-            .body(ByteStream::from(blob.as_bytes().to_vec()))
+            .body(ByteStream::from(blob.as_ref().to_vec()))
             .send()
             .await?;
 

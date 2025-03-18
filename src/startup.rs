@@ -2,7 +2,7 @@ use crate::blob::AudioBuffer;
 use crate::cache::cache::AudioCache;
 use crate::cache::redis::RedisCache;
 use crate::config::{Settings, StorageClient};
-use crate::cyberpunkpath::hasher::{suffix_result_storage_hasher, verify_hash};
+use crate::cyberpunkpath::hasher::suffix_result_storage_hasher;
 use crate::cyberpunkpath::params::Params;
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use crate::middleware::cache_middleware;
@@ -27,7 +27,6 @@ use std::future::ready;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::task;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, info, info_span, instrument, warn};
 
@@ -175,15 +174,6 @@ async fn handler(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     info!("params: {:?}", params);
 
-    // if let (Some(hash), Some(path)) = (&params.hash, &params.path) {
-    //     verify_hash(hash.to_owned().into(), path.to_owned().into()).map_err(|e| {
-    //         (
-    //             StatusCode::BAD_REQUEST,
-    //             format!("Failed to verify hash: {}", e),
-    //         )
-    //     })?;
-    // }
-
     // TODO: check result bucket for audio and serve if found
     let params_hash = suffix_result_storage_hasher(&params);
     let result = state.storage.get(&params_hash).await.inspect_err(|_| {
@@ -192,7 +182,7 @@ async fn handler(
     if let Ok(blob) = result {
         return Response::builder()
             .header(header::CONTENT_TYPE, blob.mime_type())
-            .body(Body::from(blob.as_ref()))
+            .body(Body::from(blob.into_bytes()))
             .map_err(|e| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -231,19 +221,7 @@ async fn handler(
         })?
     };
 
-    let blob = task::spawn_blocking(move || {
-        // Perform CPU-intensive operation
-        state.processor.process(&blob, &params)
-    })
-    .await
-    .map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("joining spawned task failed: {}", e),
-        )
-    })?
-    .await
-    .map_err(|e| {
+    let new_blob = state.processor.process(&blob, &params).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to process audio: {}", e),
@@ -251,17 +229,21 @@ async fn handler(
     })?;
 
     // TODO: save audio to result bucket
-    state.storage.put(&params_hash, &blob).await.map_err(|e| {
-        warn!("Failed to save result audio [{}]: {}", &params_hash, e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to save result audio: {}", e),
-        )
-    })?;
+    state
+        .storage
+        .put(&params_hash, &new_blob)
+        .await
+        .map_err(|e| {
+            warn!("Failed to save result audio [{}]: {}", &params_hash, e);
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to save result audio: {}", e),
+            )
+        })?;
 
     Response::builder()
-        .header(header::CONTENT_TYPE, blob.mime_type())
-        .body(Body::from(blob.as_ref()))
+        .header(header::CONTENT_TYPE, new_blob.mime_type())
+        .body(Body::from(new_blob.into_bytes()))
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

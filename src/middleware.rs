@@ -1,3 +1,5 @@
+use crate::cyberpunkpath::hasher::verify_hash;
+use crate::cyberpunkpath::params::Params;
 use crate::state::AppStateDyn;
 use axum::http::{header, Response, StatusCode};
 use axum::{
@@ -8,7 +10,7 @@ use axum::{
 };
 use std::time::Duration;
 
-const CACHE_KEY_PREFIX: &str = "cache:";
+const CACHE_KEY_PREFIX: &str = "req_cache:";
 const CACHE_TTL: Duration = Duration::from_secs(3600); // 1 hour
 
 #[tracing::instrument(skip(state, req, next))]
@@ -67,10 +69,21 @@ pub async fn cache_middleware(
     Ok(Response::from_parts(parts, Body::from(bytes)))
 }
 
-// pub async fn auth_middleware(
-//     State(state): State<AppStateDyn>,
-//     req: Request,
-//     next: Next,
-// ) -> Result<impl IntoResponse, (StatusCode, String)> {
-//     todo!()
-// }
+pub async fn auth_middleware(
+    State(_): State<AppStateDyn>,
+    params: Params,
+    req: Request,
+    next: Next,
+) -> Result<impl IntoResponse, (StatusCode, String)> {
+    let path = params.to_string();
+    let hash = ""; // TODO: get hash from request path
+
+    verify_hash(hash.to_owned().into(), path.to_owned().into()).map_err(|e| {
+        (
+            StatusCode::BAD_REQUEST,
+            format!("Failed to verify hash: {}", e),
+        )
+    })?;
+
+    Ok(next.run(req).await)
+}

@@ -99,12 +99,17 @@ impl<'de> Deserialize<'de> for AudioFormat {
 pub struct AudioBuffer {
     data: Bytes,
     format: AudioFormat,
-    path: Option<PathBuf>,
 }
 
 impl AsRef<[u8]> for AudioBuffer {
     fn as_ref(&self) -> &[u8] {
-        &self.as_bytes()
+        &self.data
+    }
+}
+
+impl Into<Bytes> for AudioBuffer {
+    fn into(self) -> Bytes {
+        self.data
     }
 }
 
@@ -117,7 +122,6 @@ impl AudioBuffer {
         Ok(Self {
             data: data.into(),
             format,
-            path: Some(path),
         })
     }
 
@@ -125,21 +129,13 @@ impl AudioBuffer {
         let data = data.into();
         let format = AudioFormat::from_header(&data);
 
-        Self {
-            data,
-            format,
-            path: None,
-        }
+        Self { data, format }
     }
 
     pub fn from_bytes_with_format(data: impl Into<Bytes>, format: AudioFormat) -> Self {
         let data = data.into();
 
-        Self {
-            data,
-            format,
-            path: None,
-        }
+        Self { data, format }
     }
 
     pub fn format(&self) -> AudioFormat {
@@ -162,8 +158,8 @@ impl AudioBuffer {
         self.data.is_empty()
     }
 
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.data
+    pub fn into_bytes(self) -> Bytes {
+        self.data
     }
 }
 
