@@ -102,6 +102,12 @@ pub struct AudioBuffer {
     path: Option<PathBuf>,
 }
 
+impl AsRef<[u8]> for AudioBuffer {
+    fn as_ref(&self) -> &[u8] {
+        &self.as_bytes()
+    }
+}
+
 impl AudioBuffer {
     pub async fn from_file(path: impl Into<PathBuf>) -> Result<Self> {
         let path = path.into();

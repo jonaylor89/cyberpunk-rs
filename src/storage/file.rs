@@ -1,5 +1,6 @@
+use crate::blob::AudioBuffer;
 use crate::cyberpunkpath::normalize::{normalize, SafeCharsType};
-use crate::storage::storage::{AudioStorage, Blob};
+use crate::storage::storage::AudioStorage;
 use axum::async_trait;
 use color_eyre::Result;
 use std::fs;
@@ -17,16 +18,16 @@ pub struct FileStorage {
 #[async_trait]
 impl AudioStorage for FileStorage {
     #[tracing::instrument(skip(self))]
-    async fn get(&self, key: &str) -> Result<Blob> {
+    async fn get(&self, key: &str) -> Result<AudioBuffer> {
         let full_path = self.get_full_path(key);
         let mut file = File::open(full_path).await?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).await?;
-        Ok(Blob::new(buffer))
+        Ok(AudioBuffer::from_bytes(buffer))
     }
 
     #[tracing::instrument(skip(self, blob))]
-    async fn put(&self, key: &str, blob: &Blob) -> Result<()> {
+    async fn put(&self, key: &str, blob: &AudioBuffer) -> Result<()> {
         let full_path = self.get_full_path(key);
         if let Some(parent) = full_path.parent() {
             fs::create_dir_all(parent)?;

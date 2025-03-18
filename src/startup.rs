@@ -1,3 +1,4 @@
+use crate::blob::AudioBuffer;
 use crate::cache::cache::AudioCache;
 use crate::cache::redis::RedisCache;
 use crate::config::{Settings, StorageClient};
@@ -10,7 +11,7 @@ use crate::state::AppStateDyn;
 use crate::storage::file::FileStorage;
 use crate::storage::gcs::GCloudStorage;
 use crate::storage::s3::S3Storage;
-use crate::storage::storage::{AudioStorage, Blob};
+use crate::storage::storage::AudioStorage;
 use axum::body::Body;
 use axum::extract::{MatchedPath, Request, State};
 use axum::http::{header, Response, StatusCode};
@@ -190,8 +191,8 @@ async fn handler(
     });
     if let Ok(blob) = result {
         return Response::builder()
-            .header(header::CONTENT_TYPE, blob.content_type)
-            .body(Body::from(blob.data))
+            .header(header::CONTENT_TYPE, blob.mime_type())
+            .body(Body::from(blob.as_ref()))
             .map_err(|e| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -220,14 +221,7 @@ async fn handler(
             })?
             .to_vec();
 
-        let content_type = infer::get(&raw_bytes)
-            .map(|mime| mime.to_string())
-            .unwrap_or("audio/mpeg3".to_string());
-
-        Blob {
-            data: raw_bytes,
-            content_type,
-        }
+        AudioBuffer::from_bytes(raw_bytes)
     } else {
         state.storage.get(&params.audio).await.map_err(|e| {
             (
@@ -248,6 +242,7 @@ async fn handler(
             format!("joining spawned task failed: {}", e),
         )
     })?
+    .await
     .map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -265,8 +260,8 @@ async fn handler(
     })?;
 
     Response::builder()
-        .header(header::CONTENT_TYPE, blob.content_type)
-        .body(Body::from(blob.data))
+        .header(header::CONTENT_TYPE, blob.mime_type())
+        .body(Body::from(blob.as_ref()))
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

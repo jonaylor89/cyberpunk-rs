@@ -8,13 +8,16 @@ use axum::{
 };
 use std::time::Duration;
 
+const CACHE_KEY_PREFIX: &str = "cache:";
+const CACHE_TTL: Duration = Duration::from_secs(3600); // 1 hour
+
 #[tracing::instrument(skip(state, req, next))]
 pub async fn cache_middleware(
     State(state): State<AppStateDyn>,
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cache_key = format!("{}:{}", req.method(), req.uri().path());
+    let cache_key = format!("{}:{}:{}", CACHE_KEY_PREFIX, req.method(), req.uri().path());
 
     let cache_response = state.cache.get(&cache_key).await.map_err(|e| {
         (
@@ -58,7 +61,7 @@ pub async fn cache_middleware(
     // TODO: use hash key for this
     let _ = state
         .cache
-        .set(&cache_key, bytes.as_ref(), Some(Duration::from_secs(3_600))) // 1 hour
+        .set(&cache_key, bytes.as_ref(), Some(CACHE_TTL))
         .await;
 
     Ok(Response::from_parts(parts, Body::from(bytes)))

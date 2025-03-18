@@ -172,10 +172,30 @@ impl Display for Params {
 }
 
 impl FromStr for Params {
-    type Err = Box<dyn std::error::Error>;
+    type Err = color_eyre::eyre::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        todo!()
+        let parts: Vec<&str> = s.split('?').collect();
+        let path = parts[0].trim_start_matches('/');
+
+        // Split path into components and take the last one as audio id
+        let path_components: Vec<&str> = path.split('/').collect();
+        let audio = path_components.last().unwrap_or(&"").to_string();
+
+        let mut query = HashMap::new();
+        if parts.len() > 1 {
+            // Parse query parameters
+            for param in parts[1].split('&') {
+                if let Some((key, value)) = param.split_once('=') {
+                    query
+                        .entry(key.to_string())
+                        .or_insert_with(Vec::new)
+                        .push(urlencoding::decode(value)?.into_owned());
+                }
+            }
+        }
+
+        Self::from_path(audio, query)
     }
 }
 
@@ -240,10 +260,10 @@ impl Params {
     }
 
     pub fn to_query(&self) -> HashMap<String, Vec<String>> {
-        let mut query = HashMap::new();
+        let mut query: HashMap<String, Vec<String>> = HashMap::new();
 
         if let Some(format) = &self.format {
-            query.insert("format".to_string(), vec![format.clone()]);
+            query.insert("format".to_string(), vec![format.to_string()]);
         }
         if let Some(codec) = &self.codec {
             query.insert("codec".to_string(), vec![codec.clone()]);
@@ -354,7 +374,7 @@ impl Params {
         let mut args = Vec::new();
 
         if let Some(format) = &self.format {
-            args.extend_from_slice(&["-f".to_string(), format.clone()]);
+            args.extend_from_slice(&["-f".to_string(), format.to_string()]);
         }
         if let Some(codec) = &self.codec {
             args.extend_from_slice(&["-c:a".to_string(), codec.clone()]);

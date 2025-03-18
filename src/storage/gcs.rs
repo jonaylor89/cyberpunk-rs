@@ -1,5 +1,6 @@
+use crate::blob::AudioBuffer;
 use crate::cyberpunkpath::normalize::{normalize, SafeCharsType};
-use crate::storage::storage::{AudioStorage, Blob};
+use crate::storage::storage::AudioStorage;
 use axum::async_trait;
 use color_eyre::Result;
 use google_cloud_storage::client::{Client, ClientConfig};
@@ -22,7 +23,7 @@ pub struct GCloudStorage {
 #[async_trait]
 impl AudioStorage for GCloudStorage {
     #[tracing::instrument(skip(self))]
-    async fn get(&self, key: &str) -> Result<Blob> {
+    async fn get(&self, key: &str) -> Result<AudioBuffer> {
         let full_path = self.get_full_path(key);
         let buffer = self
             .client
@@ -36,14 +37,14 @@ impl AudioStorage for GCloudStorage {
             )
             .await?;
 
-        Ok(Blob::new(buffer))
+        Ok(AudioBuffer::from_bytes(buffer))
     }
 
     #[tracing::instrument(skip(self, blob))]
-    async fn put(&self, key: &str, blob: &Blob) -> Result<()> {
+    async fn put(&self, key: &str, blob: &AudioBuffer) -> Result<()> {
         let full_path = self.get_full_path(key);
         let upload_type = UploadType::Simple(Media::new(full_path));
-        let blob_data = blob.data.clone();
+        let blob_data = blob.as_ref().to_vec();
         self.client
             .upload_object(
                 &UploadObjectRequest {

@@ -39,7 +39,6 @@ secrecy = { version = "0.10.2", features = ["serde"] }
 rand = "0.8.5"
 thiserror = "1.0.64"
 google-cloud-storage = "0.22.1"
-infer = "0.16.0"
 tower-http = { version = "0.6.1", features = ["trace", "limit"] }
 dotenvy = "0.15.7"
 metrics-exporter-prometheus = { version = "0.15.3", default-features = false }
@@ -58,6 +57,7 @@ gethostname = "1.0.0"
 chrono = "0.4.40"
 bytes = "1.10.1"
 num_cpus = "1.16.0"
+infer = "0.19.0"
 
 [dev-dependencies]
 reqwest = "0.11.12"

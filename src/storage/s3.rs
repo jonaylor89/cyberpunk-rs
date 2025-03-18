@@ -1,7 +1,8 @@
 use std::time::Duration;
 
+use crate::blob::AudioBuffer;
 use crate::cyberpunkpath::normalize::{normalize, SafeCharsType};
-use crate::storage::storage::{AudioStorage, Blob};
+use crate::storage::storage::AudioStorage;
 use aws_sdk_s3::config::{Credentials, Region};
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::Client;
@@ -23,7 +24,7 @@ pub struct S3Storage {
 #[async_trait]
 impl AudioStorage for S3Storage {
     #[tracing::instrument(skip(self))]
-    async fn get(&self, key: &str) -> Result<Blob> {
+    async fn get(&self, key: &str) -> Result<AudioBuffer> {
         let full_path = self.get_full_path(key);
 
         let output = self
@@ -35,18 +36,18 @@ impl AudioStorage for S3Storage {
             .await?;
 
         let data = output.body.collect().await?.into_bytes();
-        Ok(Blob::new(data.to_vec()))
+        Ok(AudioBuffer::from_bytes(data.to_vec()))
     }
 
     #[tracing::instrument(skip(self, blob))]
-    async fn put(&self, key: &str, blob: &Blob) -> Result<()> {
+    async fn put(&self, key: &str, blob: &AudioBuffer) -> Result<()> {
         let full_path = self.get_full_path(key);
 
         self.client
             .put_object()
             .bucket(&self.bucket)
             .key(full_path)
-            .body(ByteStream::from(blob.data.clone()))
+            .body(ByteStream::from(blob.as_bytes().to_vec()))
             .send()
             .await?;
 
