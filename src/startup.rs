@@ -1,6 +1,6 @@
 use crate::blob::AudioBuffer;
 use crate::cache::cache::AudioCache;
-use crate::cache::redis::RedisCache;
+use crate::cache::cache::Cache;
 use crate::config::{Settings, StorageClient};
 use crate::cyberpunkpath::hasher::suffix_result_storage_hasher;
 use crate::cyberpunkpath::params::Params;
@@ -45,9 +45,10 @@ impl Application {
         let port = listener.local_addr()?.port();
 
         let processor = Processor::new(config.processor);
-        let cache = RedisCache::new("redis://redis:6379")?;
+        let cache = Cache::new(config.cache)?;
+
         let server = match config.storage.client {
-            StorageClient::S3(s3_settings) => {
+            Some(StorageClient::S3(s3_settings)) => {
                 info!("Using S3 storage");
                 let storage = S3Storage::new(
                     config.storage.base_dir,
@@ -66,7 +67,7 @@ impl Application {
 
                 run(listener, storage, processor, cache).await?
             }
-            StorageClient::GCS(gcs_settings) => {
+            Some(StorageClient::GCS(gcs_settings)) => {
                 info!("using GCS storage");
                 let storage = GCloudStorage::new(
                     config.storage.base_dir,
@@ -78,10 +79,10 @@ impl Application {
 
                 run(listener, storage, processor, cache).await?
             }
-            StorageClient::Filesystem(filesystem_settings) => {
+            None => {
                 info!("using filesystem storage");
                 let storage = FileStorage::new(
-                    PathBuf::from(filesystem_settings.base_dir),
+                    PathBuf::from(config.storage.base_dir),
                     config.storage.path_prefix,
                     config.storage.safe_chars,
                 );
@@ -221,7 +222,7 @@ async fn handler(
         })?
     };
 
-    let new_blob = state.processor.process(&blob, &params).await.map_err(|e| {
+    let processed_blob = state.processor.process(&blob, &params).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to process audio: {}", e),
@@ -231,7 +232,7 @@ async fn handler(
     // TODO: save audio to result bucket
     state
         .storage
-        .put(&params_hash, &new_blob)
+        .put(&params_hash, &processed_blob)
         .await
         .map_err(|e| {
             warn!("Failed to save result audio [{}]: {}", &params_hash, e);
@@ -242,8 +243,8 @@ async fn handler(
         })?;
 
     Response::builder()
-        .header(header::CONTENT_TYPE, new_blob.mime_type())
-        .body(Body::from(new_blob.into_bytes()))
+        .header(header::CONTENT_TYPE, processed_blob.mime_type())
+        .body(Body::from(processed_blob.into_bytes()))
         .map_err(|e| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

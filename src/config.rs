@@ -52,23 +52,19 @@ pub struct ProcessorSettings {
 #[derive(Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct StorageSettings {
+    #[serde(default = "default_base_dir")]
     pub base_dir: String,
     pub path_prefix: String,
     pub safe_chars: SafeCharsType,
-    pub client: StorageClient,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client: Option<StorageClient>,
 }
 
 #[derive(Deserialize, Clone)]
 pub enum StorageClient {
     S3(S3Settings),
     GCS(GCSSettings),
-    Filesystem(FilesystemSettings),
-}
-
-impl Default for StorageClient {
-    fn default() -> Self {
-        Self::Filesystem(FilesystemSettings::default())
-    }
 }
 
 #[derive(Deserialize, Clone)]
@@ -92,13 +88,6 @@ pub struct GCSSettings {
     pub credentials: SecretString,
 }
 
-#[derive(Deserialize, Clone, Default)]
-#[serde(default)]
-pub struct FilesystemSettings {
-    #[serde(default = "default_base_dir")]
-    pub base_dir: String,
-}
-
 fn default_base_dir() -> String {
     "uploads".to_string()
 }
@@ -106,12 +95,12 @@ fn default_base_dir() -> String {
 #[derive(Deserialize, Clone)]
 pub enum CacheSettings {
     Redis { uri: String },
-    Filesystem(FilesystemCache),
+    Filesystem(FilesystemCacheSettings),
 }
 
 #[derive(Deserialize, Clone, Default)]
 #[serde(default)]
-pub struct FilesystemCache {
+pub struct FilesystemCacheSettings {
     #[serde(default = "default_cache_base_dir")]
     pub base_dir: String,
 }
@@ -122,7 +111,7 @@ fn default_cache_base_dir() -> String {
 
 impl Default for CacheSettings {
     fn default() -> Self {
-        Self::Filesystem(FilesystemCache::default())
+        Self::Filesystem(FilesystemCacheSettings::default())
     }
 }
 

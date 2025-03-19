@@ -10,7 +10,6 @@ use axum::{
     http::{request::Parts, StatusCode},
 };
 use color_eyre::Result;
-use nom::{error::VerboseError, IResult};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
@@ -40,7 +39,7 @@ where
 
         info!("Parsing path: {}", path);
 
-        let (_, params) = parse_path(path).map_err(|e| {
+        let params = Params::from_str(path).map_err(|e| {
             (
                 StatusCode::BAD_REQUEST,
                 format!("Failed to parse params: {}", e),
@@ -55,14 +54,8 @@ impl TryFrom<&str> for Params {
     type Error = String;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let (_, path) = parse_path(value).map_err(|e| format!("Failed to parse path: {}", e))?;
-        Ok(path)
+        Self::from_str(value).map_err(|e| format!("Failed to parse path: {}", e))
     }
-}
-
-#[tracing::instrument]
-pub fn parse_path(input: &str) -> IResult<&str, Params, VerboseError<&str>> {
-    todo!()
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
