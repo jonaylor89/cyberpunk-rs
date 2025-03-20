@@ -1,112 +1,131 @@
+# Cyberpunk-rs
 
-# Cyberpunk
-
-Audio Processing Server
+Advanced Audio Processing Server written in Rust
 
 ![GitHub](https://img.shields.io/github/license/jonaylor89/cyberpunk?logo=MIT) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jonaylor89/cyberpunk/Docker)
 
 [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/jonaylor89/cyberpunk)
 
-
-### Quick Start
+## Quick Start
 
 ```sh
 docker run -p 8080:8080 -e PORT=8080 ghcr.io/jonaylor89/cyberpunk:main
 ```
 
-Original audio:
-```sh
+Original audio test file:
+```
 https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3
 ```
 
-![](testdata/celtic_pt2.mp3)
-
-
-Try out the following audio URLs:
+Try out the following audio manipulation requests:
 ```
 http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3
 http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?reverse=true
-http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?slice=0:10000
-http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?reverse=true&repeat=1&slice=1000:5000
-
+http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?start_time=0&duration=10
+http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?reverse=true&fade_in=1&fade_out=1&speed=0.8
 ```
 
-### Cyberpunk Endpoint
+## Cyberpunk API
 
-Cyberpunk endpoint is a series of URL parts which defines the audio operations, followed by the audio URI:
+The Cyberpunk endpoint follows this URL structure:
 
 ```
-/HASH|unsafe/AUDIO?slice&concat&fade_in&fade_out&repeat&reverse&filters=NAME(ARGS)
+/HASH|unsafe/AUDIO?param1=value1&param2=value2&...
 ```
 
-- `HASH` is the URL Signature hash, or `unsafe` if unsafe mode is used
-- `slice`
-- `concat`
-- `fade_in`
-- `fade_out`
-- `repeat`
-- `reverse`
-- `AUDIO` is the audio URI
+- `HASH` is the URL signature hash, or `unsafe` if unsafe mode is used
+- `AUDIO` is the audio URI (local file or remote URL)
 
+### Supported Parameters
 
-Cyberpunk provides utilities for previewing and generating Cyberpunk endpoint URI, including the [cyberpunk_path](https://github.com/jonaylor89/cyberpunk/tree/main/cyberpunk/processing.py) function and the `/params` endpoint:
+Cyberpunk supports a wide range of audio processing capabilities:
 
-#### `GET /params`
+#### Format & Encoding
+- `format` - Output format (mp3, wav, etc.)
+- `codec` - Audio codec
+- `sample_rate` - Sample rate in Hz
+- `channels` - Number of audio channels
+- `bit_rate` - Bit rate in kbps
+- `bit_depth` - Bit depth
+- `quality` - Encoding quality (0.0-1.0)
+- `compression_level` - Compression level
 
-Prepending `/params` to the existing endpoint returns the endpoint attributes in JSON form, useful for preview:
+#### Time Operations
+- `start_time` - Start time in seconds
+- `duration` - Duration in seconds
+- `speed` - Playback speed multiplier
+- `reverse` - Reverse audio (true/false)
+
+#### Volume Operations
+- `volume` - Volume adjustment multiplier
+- `normalize` - Normalize audio levels (true/false)
+- `normalize_level` - Target normalization level in dB
+
+#### Audio Effects
+- `lowpass` - Lowpass filter cutoff frequency
+- `highpass` - Highpass filter cutoff frequency
+- `bandpass` - Bandpass filter parameters
+- `bass` - Bass boost/cut level
+- `treble` - Treble boost/cut level
+- `echo` - Echo effect parameters
+- `reverb` - Reverb effect parameters
+- `chorus` - Chorus effect parameters
+- `flanger` - Flanger effect parameters
+- `phaser` - Phaser effect parameters
+- `tremolo` - Tremolo effect parameters
+- `compressor` - Compressor effect parameters
+- `noise_reduction` - Noise reduction parameters
+
+#### Fades
+- `fade_in` - Fade in duration in seconds
+- `fade_out` - Fade out duration in seconds
+- `cross_fade` - Cross-fade duration in seconds
+
+#### Advanced
+- `custom_filters` - Custom FFmpeg filter parameters
+- `custom_options` - Custom FFmpeg options
+- `tags` - Metadata tags (as `tag_NAME=VALUE`)
+
+### Preview Parameters with `/params`
+
+You can preview the parameters for any request by adding `/params` before the endpoint:
 
 ```sh
-curl "http://localhost:8000/unsafe/celtic_p2.mp3?reverse=true&repeat=1&slice=1000:5000"
+curl "http://localhost:8080/params/unsafe/celtic_pt2.mp3?reverse=true&fade_in=1"
 
 {
   "audio": "celtic_pt2.mp3",
-  "hash": "unsafe",
   "reverse": true,
-  "repeat": 1,
-  "slice": {
-      "start": 1000,
-      "end": 5000,
-  }
+  "fade_in": 1.0
 }
 ```
 
-### Features
+## Storage Options
 
-- [x] Audio Streaming
+Cyberpunk supports multiple storage backends:
 
-- [x] Change encodings (e.g. mp3 -> wav)
-- [x] Audio slicing
-- [ ] Change Volume
-- [x] Concat Audio
-- [x] Repeat Audio
-- [x] Reverse Audio
-- [ ] Crossfade
-- [x] Fade in/out
-- [ ] Audio Quality
-- [ ] Audio Tagging
-- [ ] Audio Thumbnails
-- [ ] Mastering Music
+- ✅ Local File System
+- ✅ AWS S3 / MinIO
+- ✅ Google Cloud Storage (GCS)
 
-- [ ] Sound/Vocal Isolation
+## Advanced Features
 
-- [ ] [Cool ML Stuff](https://github.com/spotify/pedalboard)
+- ✅ Audio format conversion
+- ✅ Audio time manipulation (slicing, speed, reverse)
+- ✅ Audio effects and filters
+- ✅ Audio fades
+- ✅ Request caching
+- ✅ Storage abstraction
+- ✅ Metrics and monitoring
+- ✅ Remote audio fetching
 
-- [ ] [File Caching](https://gist.github.com/ruanbekker/75d98a0d5cab5d6a562c70b4be5ba86d)
+## Environment Configuration
 
-### Storage Options
+Refer to the `.env` file for all configurable environment variables.
 
-- [x] Local
-- [ ] Cloud (e.g. S3)
-- [x] Blockchain (Audius)
+## Docker Compose Examples
 
-
-### Environment
-
-To see a complete list of configurable environment variables, check out [`.env`](./.env)
-
-# Docker Compose Example
-
-Cyberpunk with file system, using mounted volume:
+### Local Storage Setup
 
 ```yaml
 version: "3"
@@ -118,12 +137,12 @@ services:
     environment:
       PORT: 8080
       AUDIO_PATH: "local"
-      FILE_STORAGE_BASE_DIR: /mnt/data/testdata/ # enable file storage by specifying base dir
+      FILE_STORAGE_BASE_DIR: /mnt/data/testdata/
     ports:
       - "8080:8080"
 ```
 
-Cyberpunk with AWS S3:
+### AWS S3 Storage Setup
 
 ```yaml
 version: "3"
@@ -132,21 +151,34 @@ services:
     image: jonaylor/cyberpunk:main
     environment:
       PORT: 8080
-      CYBERPUNK_SECRET: mysecret # secret key for URL signature
+      CYBERPUNK_SECRET: mysecret
       AWS_ACCESS_KEY_ID: ...
       AWS_SECRET_ACCESS_KEY: ...
       AWS_REGION: ...
-
       AUDIO_PATH: "s3"
+      S3_LOADER_BUCKET: mybucket
+      S3_LOADER_BASE_DIR: audio
+      S3_STORAGE_BUCKET: mybucket
+      S3_STORAGE_BASE_DIR: audio
+      S3_RESULT_STORAGE_BUCKET: mybucket
+      S3_RESULT_STORAGE_BASE_DIR: audio/result
+    ports:
+      - "8080:8080"
+```
 
-      S3_LOADER_BUCKET: mybucket # enable S3 loader by specifying bucket
-      S3_LOADER_BASE_DIR: audio # optional
+### Google Cloud Storage Setup
 
-      S3_STORAGE_BUCKET: mybucket # enable S3 storage by specifying bucket
-      S3_STORAGE_BASE_DIR: audio # optional
-
-      S3_RESULT_STORAGE_BUCKET: mybucket # enable S3 result storage by specifying bucket
-      S3_RESULT_STORAGE_BASE_DIR: audio/result # optional
+```yaml
+version: "3"
+services:
+  cyberpunk:
+    image: jonaylor/cyberpunk:main
+    environment:
+      PORT: 8080
+      CYBERPUNK_SECRET: mysecret
+      AUDIO_PATH: "gcs"
+      GCS_BUCKET: mybucket
+      # Ensure appropriate GCP credentials are available
     ports:
       - "8080:8080"
 ```

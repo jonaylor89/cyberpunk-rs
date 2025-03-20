@@ -10,9 +10,14 @@ use crate::cyberpunkpath::normalize::SafeCharsType;
 #[derive(serde::Deserialize, Clone, Default)]
 #[serde(default)]
 pub struct Settings {
+    // TODO: add config in the config to allow/disallow fetching audios from the internet
+    // TODO: add config for unsafe URLs vs force the hash
+    // TODO: add secret key or somehow hash with API key?
     pub application: ApplicationSettings,
     pub custom_tags: HashMap<String, String>,
     pub processor: ProcessorSettings,
+
+    // TODO: save audio to result bucket (diff from storage bucket)
     pub storage: StorageSettings,
     pub cache: CacheSettings,
 }

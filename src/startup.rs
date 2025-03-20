@@ -177,7 +177,6 @@ async fn handler(
     State(state): State<AppStateDyn>,
     params: Params,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    // TODO: check result bucket for audio and serve if found
     let params_hash = suffix_result_storage_hasher(&params);
     let result = state.storage.get(&params_hash).await.inspect_err(|_| {
         info!("no audio in results storage: {}", &params);
@@ -194,7 +193,6 @@ async fn handler(
             });
     }
 
-    // TODO: add config in the config to allow/disallow fetching audios from the internet
     let blob = if params.audio.starts_with("https://") || params.audio.starts_with("http://") {
         let raw_bytes = reqwest::get(&params.audio)
             .await
@@ -231,7 +229,6 @@ async fn handler(
         )
     })?;
 
-    // TODO: save audio to result bucket
     state
         .storage
         .put(&params_hash, &processed_blob)
