@@ -117,7 +117,6 @@ pub async fn cache_middleware(
         )
     })?;
 
-    // TODO: use hash key for this
     let _ = state
         .cache
         .set(&cache_key, bytes.as_ref(), Some(CACHE_TTL))

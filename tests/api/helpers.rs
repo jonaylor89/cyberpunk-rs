@@ -1,5 +1,5 @@
 use cyberpunk::{
-    configuration::get_configuration,
+    config::get_configuration,
     startup::Application,
     telemetry::{get_subscriber, init_subscriber},
 };
@@ -38,7 +38,7 @@ pub async fn spawn_app() -> TestApp {
         .await
         .expect("Failed to build application");
 
-    let application_port = application.port();
+    let application_port = application.port;
     let address = format!("http://localhost:{}", application_port);
 
     let _ = tokio::spawn(application.run_until_stopped());

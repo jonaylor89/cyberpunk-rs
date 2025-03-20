@@ -1108,6 +1108,7 @@ dependencies = [
  "metrics-exporter-prometheus",
  "nom",
  "num_cpus",
+ "once_cell",
  "pretty_assertions",
  "rand 0.8.5",
  "redis",
