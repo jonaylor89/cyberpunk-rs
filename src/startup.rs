@@ -5,6 +5,7 @@ use crate::config::{Settings, StorageClient};
 use crate::cyberpunkpath::hasher::suffix_result_storage_hasher;
 use crate::cyberpunkpath::params::Params;
 use crate::metrics::{setup_metrics_recorder, track_metrics};
+use crate::middleware::auth_middleware;
 use crate::middleware::cache_middleware;
 use crate::processor::processor::{AudioProcessor, Processor};
 use crate::state::AppStateDyn;
@@ -137,7 +138,10 @@ where
             "/",
             Router::new()
                 .route("/*cyberpunkpath", get(handler))
-                // add auth middleware for params and hash
+                .route_layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                ))
                 .route_layer(middleware::from_fn_with_state(
                     state.clone(),
                     cache_middleware,

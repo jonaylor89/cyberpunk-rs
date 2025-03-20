@@ -8,6 +8,7 @@ use axum::{
     middleware::Next,
     response::IntoResponse,
 };
+use bytes::Bytes;
 use std::time::Duration;
 use tracing::debug;
 
@@ -40,44 +41,44 @@ pub async fn cache_middleware(
         let total_size = buf.len();
 
         debug!("Cache hit key={}", cache_key);
-        // let headers = req.headers();
+        let headers = req.headers();
 
-        // // Handle range request
-        // if let Some(range) = headers.get(header::RANGE) {
-        //     if let Ok(range_str) = range.to_str() {
-        //         if let Some(range_val) = range_str.strip_prefix("bytes=") {
-        //             let (start, end) = parse_range(range_val, total_size);
-        //             let length = end - start + 1;
+        // Handle range request
+        if let Some(range) = headers.get(header::RANGE) {
+            if let Ok(range_str) = range.to_str() {
+                if let Some(range_val) = range_str.strip_prefix("bytes=") {
+                    let (start, end) = parse_range(range_val, total_size);
+                    let length = end - start + 1;
 
-        //             let content = Bytes::copy_from_slice(&buf[start..=end]);
+                    let content = Bytes::copy_from_slice(&buf[start..=end]);
 
-        //             let res = Response::builder()
-        //                 .status(StatusCode::PARTIAL_CONTENT)
-        //                 .header(header::CONTENT_TYPE, content_type)
-        //                 .header(header::ACCEPT_RANGES, "bytes")
-        //                 .header(header::CONTENT_LENGTH, length.to_string())
-        //                 .header(
-        //                     header::CONTENT_RANGE,
-        //                     format!("bytes {}-{}/{}", start, end, total_size),
-        //                 )
-        //                 .header(header::CACHE_CONTROL, "no-cache")
-        //                 .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-        //                 .header(
-        //                     header::CONTENT_DISPOSITION,
-        //                     HeaderValue::from_static("inline"),
-        //                 )
-        //                 .body(Body::from(content))
-        //                 .map_err(|e| {
-        //                     (
-        //                         StatusCode::INTERNAL_SERVER_ERROR,
-        //                         format!("Failed to build response: {}", e),
-        //                     )
-        //                 })?;
+                    let res = Response::builder()
+                        .status(StatusCode::PARTIAL_CONTENT)
+                        .header(header::CONTENT_TYPE, content_type)
+                        .header(header::ACCEPT_RANGES, "bytes")
+                        .header(header::CONTENT_LENGTH, length.to_string())
+                        .header(
+                            header::CONTENT_RANGE,
+                            format!("bytes {}-{}/{}", start, end, total_size),
+                        )
+                        .header(header::CACHE_CONTROL, "no-cache")
+                        .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                        .header(
+                            header::CONTENT_DISPOSITION,
+                            HeaderValue::from_static("inline"),
+                        )
+                        .body(Body::from(content))
+                        .map_err(|e| {
+                            (
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                                format!("Failed to build response: {}", e),
+                            )
+                        })?;
 
-        //             return Ok(res);
-        //         }
-        //     }
-        // }
+                    return Ok(res);
+                }
+            }
+        }
 
         // Return full content if no range request
         let res = Response::builder()
@@ -132,14 +133,22 @@ pub async fn auth_middleware(
     next: Next,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let path = params.to_string();
-    let hash = ""; // TODO: get hash from request path
 
-    verify_hash(hash.to_owned().into(), path.to_owned().into()).map_err(|e| {
-        (
-            StatusCode::BAD_REQUEST,
-            format!("Failed to verify hash: {}", e),
-        )
-    })?;
+    let hash = req
+        .uri()
+        .path()
+        .strip_prefix("/")
+        .and_then(|s| s.split("/").next())
+        .ok_or((StatusCode::BAD_REQUEST, format!("Failed to parse URI hash")))?;
+
+    if hash != "unsafe" {
+        verify_hash(hash.to_owned().into(), path.to_owned().into()).map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("Failed to verify hash: {}", e),
+            )
+        })?;
+    }
 
     Ok(next.run(req).await)
 }
