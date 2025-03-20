@@ -7,6 +7,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct FileStorage {
@@ -20,6 +21,10 @@ impl AudioStorage for FileStorage {
     #[tracing::instrument(skip(self))]
     async fn get(&self, key: &str) -> Result<AudioBuffer> {
         let full_path = self.get_full_path(key);
+        if let Some(p) = full_path.to_str() {
+            debug!("full path {}", p);
+        }
+
         let mut file = File::open(full_path).await?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).await?;
@@ -29,6 +34,10 @@ impl AudioStorage for FileStorage {
     #[tracing::instrument(skip(self, blob))]
     async fn put(&self, key: &str, blob: &AudioBuffer) -> Result<()> {
         let full_path = self.get_full_path(key);
+        if let Some(p) = full_path.to_str() {
+            debug!("full path {}", p);
+        }
+
         if let Some(parent) = full_path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -45,6 +54,10 @@ impl AudioStorage for FileStorage {
     #[tracing::instrument(skip(self))]
     async fn delete(&self, key: &str) -> Result<()> {
         let full_path = self.get_full_path(key);
+        if let Some(p) = full_path.to_str() {
+            debug!("full path {}", p);
+        }
+
         tokio::fs::remove_file(full_path).await?;
         Ok(())
     }

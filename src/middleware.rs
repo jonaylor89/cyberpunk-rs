@@ -1,7 +1,7 @@
-use crate::cyberpunkpath::hasher::verify_hash;
+use crate::cyberpunkpath::hasher::{suffix_result_storage_hasher, verify_hash};
 use crate::cyberpunkpath::params::Params;
 use crate::state::AppStateDyn;
-use axum::http::{header, Response, StatusCode};
+use axum::http::{header, HeaderValue, Response, StatusCode};
 use axum::{
     body::{to_bytes, Body},
     extract::{Request, State},
@@ -9,6 +9,7 @@ use axum::{
     response::IntoResponse,
 };
 use std::time::Duration;
+use tracing::debug;
 
 const CACHE_KEY_PREFIX: &str = "req_cache:";
 const CACHE_TTL: Duration = Duration::from_secs(3600); // 1 hour
@@ -16,11 +17,15 @@ const CACHE_TTL: Duration = Duration::from_secs(3600); // 1 hour
 #[tracing::instrument(skip(state, req, next))]
 pub async fn cache_middleware(
     State(state): State<AppStateDyn>,
+    params: Params,
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let cache_key = format!("{}:{}:{}", CACHE_KEY_PREFIX, req.method(), req.uri().path());
+    let params_hash = suffix_result_storage_hasher(&params);
 
+    let cache_key = format!("{}:{}:{}", CACHE_KEY_PREFIX, req.method(), params_hash);
+
+    debug!("Cache key: {}", cache_key);
     let cache_response = state.cache.get(&cache_key).await.map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -31,9 +36,60 @@ pub async fn cache_middleware(
         // Return cached response if available
         let content_type = infer::get(&buf)
             .map(|mime| mime.to_string())
-            .unwrap_or("audio/mpeg3".to_string());
+            .unwrap_or("audio/mpeg".to_string());
+        let total_size = buf.len();
+
+        debug!("Cache hit key={}", cache_key);
+        // let headers = req.headers();
+
+        // // Handle range request
+        // if let Some(range) = headers.get(header::RANGE) {
+        //     if let Ok(range_str) = range.to_str() {
+        //         if let Some(range_val) = range_str.strip_prefix("bytes=") {
+        //             let (start, end) = parse_range(range_val, total_size);
+        //             let length = end - start + 1;
+
+        //             let content = Bytes::copy_from_slice(&buf[start..=end]);
+
+        //             let res = Response::builder()
+        //                 .status(StatusCode::PARTIAL_CONTENT)
+        //                 .header(header::CONTENT_TYPE, content_type)
+        //                 .header(header::ACCEPT_RANGES, "bytes")
+        //                 .header(header::CONTENT_LENGTH, length.to_string())
+        //                 .header(
+        //                     header::CONTENT_RANGE,
+        //                     format!("bytes {}-{}/{}", start, end, total_size),
+        //                 )
+        //                 .header(header::CACHE_CONTROL, "no-cache")
+        //                 .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+        //                 .header(
+        //                     header::CONTENT_DISPOSITION,
+        //                     HeaderValue::from_static("inline"),
+        //                 )
+        //                 .body(Body::from(content))
+        //                 .map_err(|e| {
+        //                     (
+        //                         StatusCode::INTERNAL_SERVER_ERROR,
+        //                         format!("Failed to build response: {}", e),
+        //                     )
+        //                 })?;
+
+        //             return Ok(res);
+        //         }
+        //     }
+        // }
+
+        // Return full content if no range request
         let res = Response::builder()
             .header(header::CONTENT_TYPE, content_type)
+            .header(header::ACCEPT_RANGES, "bytes")
+            .header(header::CONTENT_LENGTH, total_size.to_string())
+            .header(header::CACHE_CONTROL, "no-cache")
+            .header(header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+            .header(
+                header::CONTENT_DISPOSITION,
+                HeaderValue::from_static("inline"),
+            )
             .body(Body::from(buf))
             .map_err(|e| {
                 (
@@ -86,4 +142,17 @@ pub async fn auth_middleware(
     })?;
 
     Ok(next.run(req).await)
+}
+
+fn parse_range(range: &str, total_size: usize) -> (usize, usize) {
+    let mut parts = range.split('-');
+    let start = parts
+        .next()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(0);
+    let end = parts
+        .next()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(total_size - 1);
+    (start, end.min(total_size - 1))
 }

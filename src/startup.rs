@@ -173,8 +173,6 @@ async fn handler(
     State(state): State<AppStateDyn>,
     params: Params,
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
-    info!("params: {:?}", params);
-
     // TODO: check result bucket for audio and serve if found
     let params_hash = suffix_result_storage_hasher(&params);
     let result = state.storage.get(&params_hash).await.inspect_err(|_| {

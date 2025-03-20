@@ -28,6 +28,18 @@ impl AudioFormat {
         }
     }
 
+    fn from_extension(ext: &str) -> Self {
+        match ext.to_lowercase().as_str() {
+            "mp3" => Self::Mp3,
+            "wav" => Self::Wav,
+            "flac" => Self::Flac,
+            "ogg" => Self::Ogg,
+            "m4a" => Self::M4a,
+            "opus" => Self::Opus,
+            _ => Self::Unknown,
+        }
+    }
+
     fn mime_type(&self) -> &'static str {
         match self {
             Self::Mp3 => "audio/mpeg",
@@ -117,7 +129,17 @@ impl AudioBuffer {
     pub async fn from_file(path: impl Into<PathBuf>) -> Result<Self> {
         let path = path.into();
         let data = fs::read(&path).await?;
-        let format = AudioFormat::from_header(&data);
+        let format = match AudioFormat::from_header(&data) {
+            AudioFormat::Unknown => {
+                let extension = path.to_str().unwrap_or_default().split(".").last();
+                if let Some(ext) = extension {
+                    AudioFormat::from_extension(ext)
+                } else {
+                    AudioFormat::Unknown
+                }
+            }
+            rest => rest,
+        };
 
         Ok(Self {
             data: data.into(),

@@ -8,7 +8,7 @@ custom_tags:
   env: local
 processor:
   max_filter_ops: 256
-  concurrency: 18
+  concurrency: 1
   max_cache_files: 0
   max_cache_mem: 0
   max_cache_size: 0

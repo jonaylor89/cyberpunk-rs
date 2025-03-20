@@ -9,9 +9,10 @@ use axum::{
     extract::FromRequestParts,
     http::{request::Parts, StatusCode},
 };
-use color_eyre::Result;
+use color_eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
 use tracing::info;
+use url::form_urlencoded;
 
 use crate::blob::AudioFormat;
 
@@ -37,9 +38,14 @@ where
         let uri = &parts.uri;
         let path = uri.path().trim_start_matches("/params");
 
-        info!("Parsing path: {}", path);
+        // Parse query string into a HashMap
+        let query_params_string = uri.query().unwrap_or("");
+        let query_params: HashMap<String, String> =
+            form_urlencoded::parse(query_params_string.as_bytes())
+                .into_owned()
+                .collect();
 
-        let params = Params::from_str(path).map_err(|e| {
+        let params = Params::from_path(path.to_string(), query_params).map_err(|e| {
             (
                 StatusCode::BAD_REQUEST,
                 format!("Failed to parse params: {}", e),
@@ -171,79 +177,86 @@ impl FromStr for Params {
         let parts: Vec<&str> = s.split('?').collect();
         let path = parts[0].trim_start_matches('/');
 
+        info!("Path: {} - {:?}", path, parts);
+
         // Split path into components and take the last one as audio id
         let path_components: Vec<&str> = path.split('/').collect();
         let audio = path_components.last().unwrap_or(&"").to_string();
 
-        let mut query = HashMap::new();
-        if parts.len() > 1 {
-            // Parse query parameters
-            for param in parts[1].split('&') {
-                if let Some((key, value)) = param.split_once('=') {
-                    query
-                        .entry(key.to_string())
-                        .or_insert_with(Vec::new)
-                        .push(urlencoding::decode(value)?.into_owned());
-                }
-            }
+        if parts.len() <= 1 {
+            return Self::from_path(audio, HashMap::new());
         }
 
-        Self::from_path(audio, query)
+        let query_params: HashMap<String, String> = form_urlencoded::parse(parts[1].as_bytes())
+            .into_owned()
+            .collect();
+
+        Self::from_path(audio, query_params)
     }
 }
 
 impl Params {
-    pub fn from_path(audio: String, query: HashMap<String, Vec<String>>) -> Result<Self> {
+    pub fn from_path(path: String, query: HashMap<String, String>) -> Result<Self> {
         let mut params = Self::default();
-        params.audio = audio;
 
-        for (key, values) in query {
-            if let Some(value) = values.first() {
-                match key.as_str() {
-                    "format" => {
-                        params.format =
-                            Some(value.parse::<AudioFormat>().unwrap_or(AudioFormat::Mp3))
-                    }
-                    "codec" => params.codec = Some(value.to_string()),
-                    "sample_rate" => params.sample_rate = value.parse().ok(),
-                    "channels" => params.channels = value.parse().ok(),
-                    "bit_rate" => params.bit_rate = value.parse().ok(),
-                    "bit_depth" => params.bit_depth = value.parse().ok(),
-                    "quality" => params.quality = value.parse().ok(),
-                    "compression_level" => params.compression_level = value.parse().ok(),
-                    "start_time" => params.start_time = value.parse().ok(),
-                    "duration" => params.duration = value.parse().ok(),
-                    "speed" => params.speed = value.parse().ok(),
-                    "reverse" => params.reverse = Some(value == "true" || value == "1"),
-                    "volume" => params.volume = value.parse().ok(),
-                    "normalize" => params.normalize = Some(value == "true" || value == "1"),
-                    "normalize_level" => params.normalize_level = value.parse().ok(),
-                    "lowpass" => params.lowpass = value.parse().ok(),
-                    "highpass" => params.highpass = value.parse().ok(),
-                    "bandpass" => params.bandpass = Some(value.to_string()),
-                    "bass" => params.bass = value.parse().ok(),
-                    "treble" => params.treble = value.parse().ok(),
-                    "echo" => params.echo = Some(value.to_string()),
-                    "reverb" => params.reverb = Some(value.to_string()),
-                    "chorus" => params.chorus = Some(value.to_string()),
-                    "flanger" => params.flanger = Some(value.to_string()),
-                    "phaser" => params.phaser = Some(value.to_string()),
-                    "tremolo" => params.tremolo = Some(value.to_string()),
-                    "compressor" => params.compressor = Some(value.to_string()),
-                    "noise_reduction" => params.noise_reduction = Some(value.to_string()),
-                    "fade_in" => params.fade_in = value.parse().ok(),
-                    "fade_out" => params.fade_out = value.parse().ok(),
-                    "cross_fade" => params.cross_fade = value.parse().ok(),
-                    "custom_filters" => params.custom_filters = Some(values.clone()),
-                    "custom_options" => params.custom_options = Some(values.clone()),
-                    _ => {
-                        if key.starts_with("tag_") {
-                            let tag_key = key.trim_start_matches("tag_").to_string();
-                            params
-                                .tags
-                                .get_or_insert_with(HashMap::new)
-                                .insert(tag_key, value.to_string());
-                        }
+        params.audio = path
+            .split("/")
+            .last()
+            .ok_or(eyre::eyre!("Invalid audio path"))?
+            .to_string();
+
+        for (key, value) in query {
+            match key.as_str() {
+                "format" => {
+                    params.format = Some(value.parse::<AudioFormat>().unwrap_or(AudioFormat::Mp3))
+                }
+                "codec" => params.codec = Some(value.to_string()),
+                "sample_rate" => params.sample_rate = value.parse().ok(),
+                "channels" => params.channels = value.parse().ok(),
+                "bit_rate" => params.bit_rate = value.parse().ok(),
+                "bit_depth" => params.bit_depth = value.parse().ok(),
+                "quality" => params.quality = value.parse().ok(),
+                "compression_level" => params.compression_level = value.parse().ok(),
+                "start_time" => params.start_time = value.parse().ok(),
+                "duration" => params.duration = value.parse().ok(),
+                "speed" => params.speed = value.parse().ok(),
+                "reverse" => params.reverse = Some(value == "true" || value == "1"),
+                "volume" => params.volume = value.parse().ok(),
+                "normalize" => params.normalize = Some(value == "true" || value == "1"),
+                "normalize_level" => params.normalize_level = value.parse().ok(),
+                "lowpass" => params.lowpass = value.parse().ok(),
+                "highpass" => params.highpass = value.parse().ok(),
+                "bandpass" => params.bandpass = Some(value.to_string()),
+                "bass" => params.bass = value.parse().ok(),
+                "treble" => params.treble = value.parse().ok(),
+                "echo" => params.echo = Some(value.to_string()),
+                "reverb" => params.reverb = Some(value.to_string()),
+                "chorus" => params.chorus = Some(value.to_string()),
+                "flanger" => params.flanger = Some(value.to_string()),
+                "phaser" => params.phaser = Some(value.to_string()),
+                "tremolo" => params.tremolo = Some(value.to_string()),
+                "compressor" => params.compressor = Some(value.to_string()),
+                "noise_reduction" => params.noise_reduction = Some(value.to_string()),
+                "fade_in" => params.fade_in = value.parse().ok(),
+                "fade_out" => params.fade_out = value.parse().ok(),
+                "cross_fade" => params.cross_fade = value.parse().ok(),
+                _ => {
+                    if key.starts_with("tag_") {
+                        let tag_key = key.trim_start_matches("tag_").to_string();
+                        params
+                            .tags
+                            .get_or_insert_with(HashMap::new)
+                            .insert(tag_key, value.to_string());
+                    } else if key.starts_with("filter_") {
+                        params
+                            .custom_filters
+                            .get_or_insert_with(Vec::new)
+                            .push(value);
+                    } else if key.starts_with("option_") {
+                        params
+                            .custom_options
+                            .get_or_insert_with(Vec::new)
+                            .push(value);
                     }
                 }
             }
