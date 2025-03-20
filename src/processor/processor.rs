@@ -1,4 +1,4 @@
-use std::num::NonZeroUsize;
+use std::{collections::HashMap, num::NonZeroUsize};
 
 use axum::async_trait;
 use color_eyre::Result;
@@ -19,6 +19,7 @@ pub trait AudioProcessor: Send + Sync {
 #[derive(Debug)]
 pub struct Processor {
     semaphore: Semaphore,
+    tags: HashMap<String, String>,
 }
 
 #[async_trait]
@@ -30,7 +31,7 @@ impl AudioProcessor for Processor {
 
         let temp_dir = TempDir::new()?;
 
-        let processed_audio = process_audio(blob, params, temp_dir).await?;
+        let processed_audio = process_audio(blob, params, temp_dir, &self.tags).await?;
         info!("Audio processing completed successfully");
 
         Ok(processed_audio)
@@ -38,8 +39,8 @@ impl AudioProcessor for Processor {
 }
 
 impl Processor {
-    #[instrument(skip(config))]
-    pub fn new(config: ProcessorSettings) -> Self {
+    #[instrument(skip(config, tags))]
+    pub fn new(config: ProcessorSettings, tags: HashMap<String, String>) -> Self {
         let max_concurrent = config
             .concurrency
             .map(|concurrency| {
@@ -57,6 +58,7 @@ impl Processor {
 
         Self {
             semaphore: Semaphore::new(max_concurrent.get()),
+            tags,
         }
     }
 }

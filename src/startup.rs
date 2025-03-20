@@ -13,6 +13,7 @@ use crate::storage::file::FileStorage;
 use crate::storage::gcs::GCloudStorage;
 use crate::storage::s3::S3Storage;
 use crate::storage::storage::AudioStorage;
+use crate::tags::create_tags;
 use axum::body::Body;
 use axum::extract::{MatchedPath, Request, State};
 use axum::http::{header, Response, StatusCode};
@@ -45,7 +46,9 @@ impl Application {
         )?;
         let port = listener.local_addr()?.port();
 
-        let processor = Processor::new(config.processor);
+        let additional_tags = create_tags(config.custom_tags)?;
+
+        let processor = Processor::new(config.processor, additional_tags);
         let cache = Cache::new(config.cache)?;
 
         let server = match config.storage.client {

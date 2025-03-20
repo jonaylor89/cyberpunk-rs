@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use crate::config::Settings;
-
 const MAX_TAG_VALUE_LENGTH: usize = 256;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -14,7 +12,9 @@ pub enum TagError {
     InvalidTagValue { name: String, value: String },
 }
 
-pub fn create_tags(config: Settings) -> Result<HashMap<String, String>, TagError> {
+pub fn create_tags(
+    custom_tags: HashMap<String, String>,
+) -> Result<HashMap<String, String>, TagError> {
     let mut tags = HashMap::with_capacity(10);
 
     // Add default tags
@@ -27,7 +27,7 @@ pub fn create_tags(config: Settings) -> Result<HashMap<String, String>, TagError
     tags.insert("version".into(), VERSION.into());
 
     // Add provided custom tags
-    for (k, v) in config.custom_tags {
+    for (k, v) in custom_tags {
         // Simple validation
         if !k.chars().all(|c| c.is_alphanumeric() || c == '_') {
             return Err(TagError::InvalidTagName(format!("Invalid tag name: {}", k)));

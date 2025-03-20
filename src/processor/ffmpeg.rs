@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use color_eyre::Result;
 use tempfile::TempDir;
 use tokio::process::Command;
@@ -13,6 +15,7 @@ pub async fn process_audio(
     input: &AudioBuffer,
     params: &Params,
     temp_dir: TempDir,
+    additional_tags: &HashMap<String, String>,
 ) -> Result<AudioBuffer> {
     let output_format = params.format.unwrap_or(AudioFormat::Mp3);
 
@@ -35,6 +38,11 @@ pub async fn process_audio(
         for (k, v) in tags {
             cmd.args(["-metadata", &format!("{}={}", k, v)]);
         }
+    }
+
+    // Add additional tags
+    for (k, v) in additional_tags {
+        cmd.args(["-metadata", &format!("{}={}", k, v)]);
     }
 
     // Add encoding parameters and output path
