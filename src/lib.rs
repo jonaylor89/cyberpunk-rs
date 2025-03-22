@@ -5,6 +5,7 @@ pub mod cyberpunkpath;
 pub mod metrics;
 pub mod middleware;
 pub mod processor;
+pub mod routes;
 pub mod startup;
 pub mod state;
 pub mod storage;

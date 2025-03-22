@@ -67,8 +67,7 @@ impl TryFrom<&str> for Params {
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct Params {
     // the uri for the audio
-    #[serde(skip)]
-    pub audio: String,
+    pub key: String,
 
     // Audio Format
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -164,7 +163,7 @@ impl Display for Params {
             .collect::<Vec<_>>()
             .join("&");
 
-        write!(f, "{}?{}", self.audio, query_str)
+        write!(f, "{}?{}", self.key, query_str)
     }
 }
 
@@ -197,7 +196,7 @@ impl Params {
     pub fn from_path(path: String, query: HashMap<String, String>) -> Result<Self> {
         let mut params = Self::default();
 
-        params.audio = path
+        params.key = path
             .split("/")
             .last()
             .ok_or(eyre::eyre!("Invalid audio path"))?
@@ -504,7 +503,7 @@ mod tests {
     #[test]
     fn test_params_display() {
         let params = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             format: Some(AudioFormat::Mp3),
             quality: Some(0.5),
             ..Default::default()
@@ -523,7 +522,7 @@ mod tests {
 
         let params = Params::from_path(path, query).unwrap();
 
-        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.key, "test.mp3");
         assert_eq!(params.format, None);
     }
 
@@ -535,7 +534,7 @@ mod tests {
 
         let params = Params::from_path(path, query).unwrap();
 
-        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.key, "test.mp3");
         assert_eq!(params.format, Some(AudioFormat::Wav));
     }
 
@@ -549,7 +548,7 @@ mod tests {
 
         let params = Params::from_path(path, query).unwrap();
 
-        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.key, "test.mp3");
         assert_eq!(params.format, Some(AudioFormat::Wav));
         assert_eq!(params.volume, Some(0.8));
         assert_eq!(params.reverse, Some(true));
@@ -560,7 +559,7 @@ mod tests {
         let input = "/audio/test.mp3?format=wav&volume=0.8&reverse=true";
         let params = Params::from_str(input).unwrap();
 
-        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.key, "test.mp3");
         assert_eq!(params.format, Some(AudioFormat::Wav));
         assert_eq!(params.volume, Some(0.8));
         assert_eq!(params.reverse, Some(true));
@@ -571,13 +570,13 @@ mod tests {
         let input = "/audio/test.mp3";
         let params = Params::from_str(input).unwrap();
 
-        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.key, "test.mp3");
     }
 
     #[test]
     fn test_to_query() {
         let params = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             format: Some(AudioFormat::Wav),
             volume: Some(0.8),
             reverse: Some(true),
@@ -594,7 +593,7 @@ mod tests {
     #[test]
     fn test_to_ffmpeg_args() {
         let params = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             format: Some(AudioFormat::Wav),
             codec: Some("pcm_s16le".to_string()),
             sample_rate: Some(44100),
@@ -617,7 +616,7 @@ mod tests {
     #[test]
     fn test_collect_filters() {
         let params = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             volume: Some(0.8),
             reverse: Some(true),
             lowpass: Some(1000.0),
@@ -638,7 +637,7 @@ mod tests {
     #[test]
     fn test_to_unsafe_string() {
         let params = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             format: Some(AudioFormat::Mp3),
             ..Default::default()
         };
@@ -655,7 +654,7 @@ mod tests {
 
         assert!(result.is_ok());
         let params = result.unwrap();
-        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.key, "test.mp3");
         assert_eq!(params.format, Some(AudioFormat::Mp3));
     }
 

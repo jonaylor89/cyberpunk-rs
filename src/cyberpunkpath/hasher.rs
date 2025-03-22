@@ -41,12 +41,12 @@ pub fn suffix_result_storage_hasher(p: &params::Params) -> String {
     let digest = Sha1::digest(path.as_bytes());
     let hash = format!(".{}", hex::encode(&digest[..10]));
 
-    let audio = if p.audio.starts_with("https://") {
-        &p.audio[8..].to_string()
-    } else if p.audio.starts_with("http://") {
-        &p.audio[7..].to_string()
+    let audio = if p.key.starts_with("https://") {
+        &p.key[8..].to_string()
+    } else if p.key.starts_with("http://") {
+        &p.key[7..].to_string()
     } else {
-        &p.audio
+        &p.key
     };
 
     let dot_idx = audio.rfind('.');
@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn test_digest_result_storage_hasher() {
         let p = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             format: Some(AudioFormat::Mp3),
             quality: Some(0.5),
             ..Default::default()
@@ -163,7 +163,7 @@ mod tests {
     #[test]
     fn test_suffix_result_storage_hasher() {
         let p = Params {
-            audio: "test.mp3".to_string(),
+            key: "test.mp3".to_string(),
             format: Some(AudioFormat::Wav),
             sample_rate: Some(44100),
             ..Default::default()
@@ -190,7 +190,7 @@ mod tests {
     #[test]
     fn test_suffix_result_storage_hasher_with_format() {
         let p = Params {
-            audio: "example.mp3".to_string(),
+            key: "example.mp3".to_string(),
             format: Some(AudioFormat::Ogg),
             quality: Some(0.8),
             ..Default::default()
@@ -217,7 +217,7 @@ mod tests {
     #[test]
     fn test_suffix_result_storage_hasher_with_filters() {
         let p = Params {
-            audio: "input.mp3".to_string(),
+            key: "input.mp3".to_string(),
             format: Some(AudioFormat::Mp3),
             volume: Some(1.5),
             lowpass: Some(1000.0),

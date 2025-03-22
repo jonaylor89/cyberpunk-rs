@@ -1,36 +1,35 @@
-use crate::blob::AudioBuffer;
 use crate::cache::cache::AudioCache;
 use crate::cache::cache::Cache;
 use crate::config::{Settings, StorageClient};
-use crate::cyberpunkpath::hasher::suffix_result_storage_hasher;
-use crate::cyberpunkpath::params::Params;
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use crate::middleware::auth_middleware;
 use crate::middleware::cache_middleware;
 use crate::processor::processor::{AudioProcessor, Processor};
+use crate::routes::cyberpunkpath::cyberpunkpath_handler;
+use crate::routes::health::health_check;
+use crate::routes::mcp::mcp_handler;
+use crate::routes::params::params;
+use crate::routes::root::root_handler;
 use crate::state::AppStateDyn;
 use crate::storage::file::FileStorage;
 use crate::storage::gcs::GCloudStorage;
 use crate::storage::s3::S3Storage;
 use crate::storage::storage::AudioStorage;
 use crate::tags::create_tags;
-use axum::body::Body;
-use axum::extract::{MatchedPath, Request, State};
-use axum::http::{header, Response, StatusCode};
-use axum::response::IntoResponse;
+use axum::extract::{MatchedPath, Request};
+use axum::middleware;
 use axum::routing::get;
-use axum::{middleware, Json};
+use axum::routing::post;
 use axum::{serve::Serve, Router};
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
-use reqwest;
 use secrecy::ExposeSecret;
 use std::future::ready;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
-use tracing::{debug, info, info_span, instrument, warn};
+use tracing::{debug, info, info_span};
 
 pub struct Application {
     pub port: u16,
@@ -134,13 +133,14 @@ where
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/metrics", get(move || ready(recorder_handle.render())))
-        .route("/", get(root))
+        .route("/", get(root_handler))
+        .route("/mcp", post(mcp_handler))
         .route("/params/*cyberpunkpath", get(params))
         .route_layer(middleware::from_fn(track_metrics))
         .nest(
             "/",
             Router::new()
-                .route("/*cyberpunkpath", get(handler))
+                .route("/*cyberpunkpath", get(cyberpunkpath_handler))
                 .route_layer(middleware::from_fn_with_state(
                     state.clone(),
                     auth_middleware,
@@ -173,102 +173,4 @@ where
     let server = axum::serve(listener, app);
 
     Ok(server)
-}
-
-#[instrument(skip(state))]
-async fn handler(
-    State(state): State<AppStateDyn>,
-    params: Params,
-) -> Result<impl IntoResponse, (StatusCode, String)> {
-    let params_hash = suffix_result_storage_hasher(&params);
-    let result = state.storage.get(&params_hash).await.inspect_err(|_| {
-        info!("no audio in results storage: {}", &params);
-    });
-    if let Ok(blob) = result {
-        return Response::builder()
-            .header(header::CONTENT_TYPE, blob.mime_type())
-            .body(Body::from(blob.into_bytes()))
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to build response: {}", e),
-                )
-            });
-    }
-
-    let blob = if params.audio.starts_with("https://") || params.audio.starts_with("http://") {
-        let raw_bytes = reqwest::get(&params.audio)
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::NOT_FOUND,
-                    format!("Failed to fetch audio: {}", e),
-                )
-            })?
-            .bytes()
-            .await
-            .map_err(|e| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("Failed to fetch audio: {}", e),
-                )
-            })?
-            .to_vec();
-
-        AudioBuffer::from_bytes(raw_bytes)
-    } else {
-        state.storage.get(&params.audio).await.map_err(|e| {
-            (
-                StatusCode::NOT_FOUND,
-                format!("Failed to fetch audio: {}", e),
-            )
-        })?
-    };
-
-    let processed_blob = state.processor.process(&blob, &params).await.map_err(|e| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to process audio: {}", e),
-        )
-    })?;
-
-    state
-        .storage
-        .put(&params_hash, &processed_blob)
-        .await
-        .map_err(|e| {
-            warn!("Failed to save result audio [{}]: {}", &params_hash, e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to save result audio: {}", e),
-            )
-        })?;
-
-    Response::builder()
-        .header(header::CONTENT_TYPE, processed_blob.mime_type())
-        .body(Body::from(processed_blob.into_bytes()))
-        .map_err(|e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to build response: {}", e),
-            )
-        })
-}
-
-#[tracing::instrument]
-async fn params(params: Params) -> Result<Json<Params>, (StatusCode, String)> {
-    info!("params: {:?}", params);
-
-    Ok(Json(params))
-}
-
-#[tracing::instrument]
-async fn root() -> &'static str {
-    "Hello, World"
-}
-
-#[tracing::instrument]
-async fn health_check() -> &'static str {
-    tracing::info!("Health check called");
-    "OK"
 }
