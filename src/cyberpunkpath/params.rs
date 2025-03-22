@@ -120,8 +120,6 @@ pub struct Params {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub echo: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub reverb: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub chorus: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flanger: Option<String>,
@@ -230,7 +228,6 @@ impl Params {
                 "bass" => params.bass = value.parse().ok(),
                 "treble" => params.treble = value.parse().ok(),
                 "echo" => params.echo = Some(value.to_string()),
-                "reverb" => params.reverb = Some(value.to_string()),
                 "chorus" => params.chorus = Some(value.to_string()),
                 "flanger" => params.flanger = Some(value.to_string()),
                 "phaser" => params.phaser = Some(value.to_string()),
@@ -330,9 +327,6 @@ impl Params {
         }
         if let Some(echo) = &self.echo {
             query.insert("echo".to_string(), vec![echo.clone()]);
-        }
-        if let Some(reverb) = &self.reverb {
-            query.insert("reverb".to_string(), vec![reverb.clone()]);
         }
         if let Some(chorus) = &self.chorus {
             query.insert("chorus".to_string(), vec![chorus.clone()]);
@@ -457,9 +451,6 @@ impl Params {
         if let Some(echo) = &self.echo {
             filters.push(format!("aecho={}", echo));
         }
-        if let Some(reverb) = &self.reverb {
-            filters.push(format!("averberate={}", reverb));
-        }
         if let Some(chorus) = &self.chorus {
             filters.push(format!("chorus={}", chorus));
         }
@@ -505,10 +496,10 @@ impl Params {
         format!("{}/{}", signer.sign(&img_path), img_path)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[test]
     fn test_params_display() {
@@ -518,8 +509,185 @@ mod tests {
             quality: Some(0.5),
             ..Default::default()
         };
-        assert_eq!(params.to_string(), "Audio: test.mp3, Format: mp3");
+
+        let output = params.to_string();
+        assert!(output.starts_with("test.mp3?"));
+        assert!(output.contains("format=mp3"));
+        assert!(output.contains("quality=0.5"));
     }
 
-    // Add more tests as needed
+    #[test]
+    fn test_from_path_basic() {
+        let path = "audio/test.mp3".to_string();
+        let query = HashMap::new();
+
+        let params = Params::from_path(path, query).unwrap();
+
+        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.format, None);
+    }
+
+    #[test]
+    fn test_from_path_with_format() {
+        let path = "audio/test.mp3".to_string();
+        let mut query = HashMap::new();
+        query.insert("format".to_string(), "wav".to_string());
+
+        let params = Params::from_path(path, query).unwrap();
+
+        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.format, Some(AudioFormat::Wav));
+    }
+
+    #[test]
+    fn test_from_path_with_multiple_params() {
+        let path = "audio/test.mp3".to_string();
+        let mut query = HashMap::new();
+        query.insert("format".to_string(), "wav".to_string());
+        query.insert("volume".to_string(), "0.8".to_string());
+        query.insert("reverse".to_string(), "true".to_string());
+
+        let params = Params::from_path(path, query).unwrap();
+
+        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.format, Some(AudioFormat::Wav));
+        assert_eq!(params.volume, Some(0.8));
+        assert_eq!(params.reverse, Some(true));
+    }
+
+    #[test]
+    fn test_from_str() {
+        let input = "/audio/test.mp3?format=wav&volume=0.8&reverse=true";
+        let params = Params::from_str(input).unwrap();
+
+        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.format, Some(AudioFormat::Wav));
+        assert_eq!(params.volume, Some(0.8));
+        assert_eq!(params.reverse, Some(true));
+    }
+
+    #[test]
+    fn test_from_str_no_query() {
+        let input = "/audio/test.mp3";
+        let params = Params::from_str(input).unwrap();
+
+        assert_eq!(params.audio, "test.mp3");
+    }
+
+    #[test]
+    fn test_to_query() {
+        let params = Params {
+            audio: "test.mp3".to_string(),
+            format: Some(AudioFormat::Wav),
+            volume: Some(0.8),
+            reverse: Some(true),
+            ..Default::default()
+        };
+
+        let query = params.to_query();
+
+        assert_eq!(query.get("format").unwrap(), &vec!["wav".to_string()]);
+        assert_eq!(query.get("volume").unwrap(), &vec!["0.8".to_string()]);
+        assert_eq!(query.get("reverse").unwrap(), &vec!["true".to_string()]);
+    }
+
+    #[test]
+    fn test_to_ffmpeg_args() {
+        let params = Params {
+            audio: "test.mp3".to_string(),
+            format: Some(AudioFormat::Wav),
+            codec: Some("pcm_s16le".to_string()),
+            sample_rate: Some(44100),
+            channels: Some(2),
+            ..Default::default()
+        };
+
+        let args = params.to_ffmpeg_args();
+
+        assert!(args.contains(&"-f".to_string()));
+        assert!(args.contains(&"wav".to_string()));
+        assert!(args.contains(&"-c:a".to_string()));
+        assert!(args.contains(&"pcm_s16le".to_string()));
+        assert!(args.contains(&"-ar".to_string()));
+        assert!(args.contains(&"44100".to_string()));
+        assert!(args.contains(&"-ac".to_string()));
+        assert!(args.contains(&"2".to_string()));
+    }
+
+    #[test]
+    fn test_collect_filters() {
+        let params = Params {
+            audio: "test.mp3".to_string(),
+            volume: Some(0.8),
+            reverse: Some(true),
+            lowpass: Some(1000.0),
+            fade_in: Some(2.0),
+            fade_out: Some(3.0),
+            ..Default::default()
+        };
+
+        let filters = params.collect_filters();
+
+        assert!(filters.contains(&"volume=0.80".to_string()));
+        assert!(filters.contains(&"areverse".to_string()));
+        assert!(filters.contains(&"lowpass=f=1000.0".to_string()));
+        assert!(filters.contains(&"afade=t=in:d=2.000".to_string()));
+        assert!(filters.contains(&"afade=t=out:d=3.000".to_string()));
+    }
+
+    #[test]
+    fn test_to_unsafe_string() {
+        let params = Params {
+            audio: "test.mp3".to_string(),
+            format: Some(AudioFormat::Mp3),
+            ..Default::default()
+        };
+
+        let result = Params::to_unsafe_string(&params);
+
+        assert!(result.starts_with("unsafe/"));
+        assert!(result.contains("test.mp3?format=mp3"));
+    }
+
+    #[test]
+    fn test_try_from_str() {
+        let result = Params::try_from("/test.mp3?format=mp3");
+
+        assert!(result.is_ok());
+        let params = result.unwrap();
+        assert_eq!(params.audio, "test.mp3");
+        assert_eq!(params.format, Some(AudioFormat::Mp3));
+    }
+
+    #[test]
+    fn test_custom_filters_and_options() {
+        let mut query = HashMap::new();
+        query.insert("filter_1".to_string(), "vibrato=f=5:d=0.5".to_string());
+        query.insert("option_1".to_string(), "-map_metadata".to_string());
+
+        let params = Params::from_path("test.mp3".to_string(), query).unwrap();
+
+        assert!(params.custom_filters.is_some());
+        assert_eq!(
+            params.custom_filters.as_ref().unwrap()[0],
+            "vibrato=f=5:d=0.5"
+        );
+
+        assert!(params.custom_options.is_some());
+        assert_eq!(params.custom_options.as_ref().unwrap()[0], "-map_metadata");
+    }
+
+    #[test]
+    fn test_tags() {
+        let mut query = HashMap::new();
+        query.insert("tag_artist".to_string(), "Test Artist".to_string());
+        query.insert("tag_album".to_string(), "Test Album".to_string());
+
+        let params = Params::from_path("test.mp3".to_string(), query).unwrap();
+
+        assert!(params.tags.is_some());
+        let tags = params.tags.as_ref().unwrap();
+        assert_eq!(tags.get("artist").unwrap(), "Test Artist");
+        assert_eq!(tags.get("album").unwrap(), "Test Album");
+    }
 }

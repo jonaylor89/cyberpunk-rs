@@ -40,3 +40,61 @@ pub fn create_tags(
 
     Ok(tags)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_create_tags_with_valid_tags() {
+        let mut custom_tags = HashMap::new();
+        custom_tags.insert("artist".to_string(), "Test Artist".to_string());
+        custom_tags.insert("album".to_string(), "Test Album".to_string());
+
+        let result = create_tags(custom_tags).unwrap();
+
+        // Check default tags are present
+        assert!(result.contains_key("processor"));
+        assert!(result.contains_key("timestamp"));
+        assert!(result.contains_key("host"));
+        assert!(result.contains_key("version"));
+
+        // Check custom tags are present
+        assert_eq!(result.get("artist").unwrap(), "Test Artist");
+        assert_eq!(result.get("album").unwrap(), "Test Album");
+    }
+
+    #[test]
+    fn test_create_tags_with_invalid_tag_name() {
+        let mut custom_tags = HashMap::new();
+        custom_tags.insert("invalid-tag".to_string(), "Value".to_string());
+
+        let result = create_tags(custom_tags);
+        assert!(matches!(result, Err(TagError::InvalidTagName(_))));
+    }
+
+    #[test]
+    fn test_create_tags_with_long_value() {
+        let mut custom_tags = HashMap::new();
+        custom_tags.insert(
+            "long_value".to_string(),
+            "a".repeat(MAX_TAG_VALUE_LENGTH + 1),
+        );
+
+        let result = create_tags(custom_tags);
+        assert!(matches!(result, Err(TagError::InvalidTagValue { .. })));
+    }
+
+    #[test]
+    fn test_create_tags_empty_custom_tags() {
+        let custom_tags = HashMap::new();
+        let result = create_tags(custom_tags).unwrap();
+
+        // Should only contain default tags
+        assert_eq!(result.len(), 4);
+        assert!(result.contains_key("processor"));
+        assert!(result.contains_key("timestamp"));
+        assert!(result.contains_key("host"));
+        assert!(result.contains_key("version"));
+    }
+}

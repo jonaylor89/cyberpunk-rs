@@ -68,7 +68,6 @@ Cyberpunk supports a wide range of audio processing capabilities:
 - `bass` - Bass boost/cut level
 - `treble` - Treble boost/cut level
 - `echo` - Echo effect parameters
-- `reverb` - Reverb effect parameters
 - `chorus` - Chorus effect parameters
 - `flanger` - Flanger effect parameters
 - `phaser` - Phaser effect parameters
@@ -104,81 +103,146 @@ curl "http://localhost:8080/params/unsafe/celtic_pt2.mp3?reverse=true&fade_in=1"
 
 Cyberpunk supports multiple storage backends:
 
-- ✅ Local File System
-- ✅ AWS S3 / MinIO
-- ✅ Google Cloud Storage (GCS)
+- [x] Local File System
+- [x] AWS S3 / MinIO
+- [x] Google Cloud Storage (GCS)
+- [_] Decentralized Storage (IPFS, Audius)
 
 ## Advanced Features
 
-- ✅ Audio format conversion
-- ✅ Audio time manipulation (slicing, speed, reverse)
-- ✅ Audio effects and filters
-- ✅ Audio fades
-- ✅ Request caching
-- ✅ Storage abstraction
-- ✅ Metrics and monitoring
-- ✅ Remote audio fetching
+- [x] Audio format conversion
+- [x] Audio time manipulation (slicing, speed, reverse)
+- [x] Audio effects and filters
+- [x] Audio fades
+- [x] Request caching
+- [x] Storage abstraction
+- [x] Metrics and monitoring
+- [x] Remote audio fetching
 
-## Environment Configuration
 
-Refer to the `.env` file for all configurable environment variables.
+## Configuration
 
-## Docker Compose Examples
+Cyberpunk-rs uses a flexible configuration system combining YAML configuration files and environment variables.
 
-### Local Storage Setup
+### Configuration Files
 
+The configuration files are structured as follows:
+- `config/base.yml` - Base configuration applied to all environments
+- `config/local.yml` - Development environment configuration
+- `config/production.yml` - Production environment configuration
+
+You can select which environment to use by setting the `APP_ENVIRONMENT` environment variable to either `local` or `production`.
+
+### Configuration Structure
+
+#### Application Settings
 ```yaml
-version: "3"
-services:
-  cyberpunk:
-    image: jonaylor/cyberpunk:main
-    volumes:
-      - ./:/mnt/data
-    environment:
-      PORT: 8080
-      AUDIO_PATH: "local"
-      FILE_STORAGE_BASE_DIR: /mnt/data/testdata/
-    ports:
-      - "8080:8080"
+application:
+  port: 8080                         # Port the server listens on
+  host: "127.0.0.1"                  # Host the server binds to
+  hmac_secret: "your-secret-key"     # Secret for URL signing
 ```
 
-### AWS S3 Storage Setup
-
+#### Storage Settings
 ```yaml
-version: "3"
-services:
-  cyberpunk:
-    image: jonaylor/cyberpunk:main
-    environment:
-      PORT: 8080
-      CYBERPUNK_SECRET: mysecret
-      AWS_ACCESS_KEY_ID: ...
-      AWS_SECRET_ACCESS_KEY: ...
-      AWS_REGION: ...
-      AUDIO_PATH: "s3"
-      S3_LOADER_BUCKET: mybucket
-      S3_LOADER_BASE_DIR: audio
-      S3_STORAGE_BUCKET: mybucket
-      S3_STORAGE_BASE_DIR: audio
-      S3_RESULT_STORAGE_BUCKET: mybucket
-      S3_RESULT_STORAGE_BASE_DIR: audio/result
-    ports:
-      - "8080:8080"
+storage:
+  base_dir: "/path/to/storage"       # Base directory for file storage
+  path_prefix: "audio/"              # Prefix for storage paths
+  safe_chars: "default"              # Character sanitization mode
+  client:                            # Optional storage client configuration
+    # S3 Storage Configuration
+    S3:
+      region: "us-east-1"
+      bucket: "my-bucket"
+      endpoint: "https://s3.amazonaws.com"  # S3-compatible endpoint URL
+      access_key: "access-key"
+      secret_key: "secret-key"
+
+    # Or Google Cloud Storage Configuration
+    GCS:
+      bucket: "my-gcs-bucket"
+      credentials: "my-credentials"  # GCS credentials
 ```
 
-### Google Cloud Storage Setup
+#### Processor Settings
+```yaml
+processor:
+  disabled_filters: []               # List of disabled audio filters
+  max_filter_ops: 256               # Maximum number of filter operations
+  concurrency: 4                    # Concurrent processing threads (null = auto)
+  max_cache_files: 1000             # Maximum number of cached files
+  max_cache_mem: 256                # Maximum memory used for caching (MB)
+  max_cache_size: 1024              # Maximum cache size (MB)
+```
+
+#### Cache Settings
+```yaml
+cache:
+  # Redis Cache Configuration
+  Redis:
+    uri: "redis://localhost:6379"
+
+  # Or Filesystem Cache Configuration
+  Filesystem:
+    base_dir: "/path/to/cache"      # Cache directory
+```
+
+#### Custom Tags
+```yaml
+custom_tags:
+  env: "production"                 # Custom metadata tags
+  version: "1.0.0"
+```
+
+### Environment Variables
+
+All configuration options can also be set using environment variables with the following format:
+`APP_SECTION__KEY=value`
+
+For example:
+- `APP_APPLICATION__PORT=8080`
+- `APP_STORAGE__BASE_DIR=/path/to/storage`
+- `APP_CACHE__FILESYSTEM__BASE_DIR=/path/to/cache`
+
+Environment variables take precedence over values defined in the configuration files.
+
+### Example: Local Development Configuration
 
 ```yaml
-version: "3"
-services:
-  cyberpunk:
-    image: jonaylor/cyberpunk:main
-    environment:
-      PORT: 8080
-      CYBERPUNK_SECRET: mysecret
-      AUDIO_PATH: "gcs"
-      GCS_BUCKET: mybucket
-      # Ensure appropriate GCP credentials are available
-    ports:
-      - "8080:8080"
+application:
+  host: 127.0.0.1
+  base_url: "http://127.0.0.1"
+storage:
+  base_dir: /path/to/project
+  path_prefix: testdata/
+custom_tags:
+  env: local
+processor:
+  max_filter_ops: 256
+  concurrency: 1
+cache:
+  filesystem:
+    base_dir: /path/to/project/cache
+```
+
+### Example: Production Configuration
+
+```yaml
+application:
+  host: 0.0.0.0  # Listen on all interfaces
+  hmac_secret: ${CYBERPUNK_SECRET}  # Use environment variable for secret
+storage:
+  client:
+    S3:
+      region: ${AWS_REGION}
+      bucket: ${S3_BUCKET}
+      access_key: ${AWS_ACCESS_KEY_ID}
+      secret_key: ${AWS_SECRET_ACCESS_KEY}
+processor:
+  concurrency: 8  # Use more concurrent threads in production
+cache:
+  Redis:
+    uri: ${REDIS_URL}
+custom_tags:
+  env: production
 ```
