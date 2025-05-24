@@ -7,7 +7,6 @@ use crate::middleware::cache_middleware;
 use crate::processor::processor::{AudioProcessor, Processor};
 use crate::routes::cyberpunkpath::cyberpunkpath_handler;
 use crate::routes::health::health_check;
-use crate::routes::mcp::mcp_handler;
 use crate::routes::params::params;
 use crate::routes::root::root_handler;
 use crate::state::AppStateDyn;
@@ -19,7 +18,6 @@ use crate::tags::create_tags;
 use axum::extract::{MatchedPath, Request};
 use axum::middleware;
 use axum::routing::get;
-use axum::routing::post;
 use axum::{serve::Serve, Router};
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
@@ -38,7 +36,7 @@ pub struct Application {
 
 impl Application {
     pub async fn build(config: Settings) -> Result<Self> {
-        let address = format!("{}:{}", config.application.host, config.application.port);
+        let address = format!("{}:{}", config.application.host, config.port);
         println!("Server started at {}\n", &address);
         let listener = TcpListener::bind(address).await.wrap_err(
             "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
@@ -133,8 +131,9 @@ where
     let app = Router::new()
         .route("/health", get(health_check))
         .route("/metrics", get(move || ready(recorder_handle.render())))
+        .route("/openapi.json", get(crate::routes::openapi::openapi_json))
+        .route("/api-schema", get(crate::routes::openapi::get_openapi_schema))
         .route("/", get(root_handler))
-        .route("/mcp", post(mcp_handler))
         .route("/params/*cyberpunkpath", get(params))
         .route_layer(middleware::from_fn(track_metrics))
         .nest(
