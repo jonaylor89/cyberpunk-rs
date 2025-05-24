@@ -11,6 +11,7 @@ use axum::{
 };
 use color_eyre::{eyre, Result};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use tracing::info;
 use url::form_urlencoded;
 
@@ -64,7 +65,7 @@ impl TryFrom<&str> for Params {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, ToSchema)]
 pub struct Params {
     // the uri for the audio
     pub key: String,

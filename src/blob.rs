@@ -1,10 +1,11 @@
 use bytes::Bytes;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use std::{fmt, path::PathBuf, str::FromStr};
 use tokio::fs;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, ToSchema)]
 pub enum AudioFormat {
     Mp3,
     Wav,

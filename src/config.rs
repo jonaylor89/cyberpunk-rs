@@ -13,6 +13,8 @@ pub struct Settings {
     // TODO: add config in the config to allow/disallow fetching audios from the internet
     // TODO: add config for unsafe URLs vs force the hash
     // TODO: add secret key or somehow hash with API key?
+    #[serde(alias="PORT", deserialize_with="deserialize_number_from_string", default = "default_port")]
+    pub port: u16,
     pub application: ApplicationSettings,
     pub custom_tags: HashMap<String, String>,
     pub processor: ProcessorSettings,
@@ -25,8 +27,7 @@ pub struct Settings {
 #[derive(serde::Deserialize, Clone)]
 #[serde(default)]
 pub struct ApplicationSettings {
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub port: u16,
+    #[serde(alias="HOST")]
     pub host: String,
     pub hmac_secret: SecretString,
 }
@@ -34,7 +35,6 @@ pub struct ApplicationSettings {
 impl Default for ApplicationSettings {
     fn default() -> Self {
         Self {
-            port: 8080,                                                      // default port
             host: String::from("127.0.0.1"),                                 // default host
             hmac_secret: SecretString::from("this-is-a-secret".to_string()), // empty secret
         }
@@ -91,6 +91,10 @@ fn default_s3_endpoint() -> String {
 pub struct GCSSettings {
     pub bucket: String,
     pub credentials: SecretString,
+}
+
+fn default_port() -> u16 {
+    8080
 }
 
 fn default_base_dir() -> String {
@@ -167,7 +171,8 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
             config::Environment::with_prefix("APP")
                 .prefix_separator("_")
                 .separator("__"),
-        );
+        )
+        .add_source(config::Environment::default());
 
     builder
         .build()?

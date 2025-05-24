@@ -1,0 +1,14 @@
+{
+  "name": "cyberpunk-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for cyberpunk-rs audio processing",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "axios": "^1.6.0"
+  }
+}
