@@ -1,28 +1,47 @@
-# Cyberpunk-rs
+# Cyberpunk
 
-Advanced Audio Processing Server written in Rust
+Advanced Audio Processing Server for on the fly audio manipulation
 
-![GitHub](https://img.shields.io/github/license/jonaylor89/cyberpunk?logo=MIT) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jonaylor89/cyberpunk/Docker)
+![GitHub](https://img.shields.io/github/license/jonaylor89/cyberpunk-rs?logo=MIT) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jonaylor89/cyberpunk-rs/Docker)
 
-[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/jonaylor89/cyberpunk)
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/jonaylor89/cyberpunk-rs)
 
 ## Quick Start
 
+### Local Development
 ```sh
-docker run -p 8080:8080 -e PORT=8080 ghcr.io/jonaylor89/cyberpunk:main
+cargo run
 ```
+
+### Docker
+```sh
+docker run -p 8080:8080 -e PORT=8080 ghcr.io/jonaylor89/cyberpunk-rs:main
+```
+
+### Google Cloud Run (One-click deploy)
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/jonaylor89/cyberpunk-rs)
+
+### MCP Integration (Connect to LLMs)
+```sh
+# Start server, then in another terminal:
+npx @cyberpunk-rs/mcp-server
+
+# Or connect to deployed server:
+npx @cyberpunk-rs/mcp-server --server=https://your-app.run.app
+```
+See [MCP_INTEGRATION.md](MCP_INTEGRATION.md) for Claude Desktop setup.
 
 Original audio test file:
 ```
-https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3
+https://raw.githubusercontent.com/jonaylor89/cyberpunk-rs/main/testdata/celtic_pt2.mp3
 ```
 
 Try out the following audio manipulation requests:
 ```
-http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3
-http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?reverse=true
-http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?start_time=0&duration=10
-http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk/main/testdata/celtic_pt2.mp3?reverse=true&fade_in=1&fade_out=1&speed=0.8
+http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk-rs/main/testdata/celtic_pt2.mp3
+http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk-rs/main/testdata/celtic_pt2.mp3?reverse=true
+http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk-rs/main/testdata/celtic_pt2.mp3?start_time=0&duration=10
+http://localhost:8080/unsafe/https://raw.githubusercontent.com/jonaylor89/cyberpunk-rs/main/testdata/celtic_pt2.mp3?reverse=true&fade_in=1&fade_out=1&speed=0.8
 ```
 
 ## Cyberpunk API
@@ -161,7 +180,6 @@ storage:
     # Or Google Cloud Storage Configuration
     GCS:
       bucket: "my-gcs-bucket"
-      credentials: "my-credentials"  # GCS credentials
 ```
 
 #### Processor Settings

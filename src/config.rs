@@ -90,7 +90,6 @@ fn default_s3_endpoint() -> String {
 #[derive(Deserialize, Clone)]
 pub struct GCSSettings {
     pub bucket: String,
-    pub credentials: SecretString,
 }
 
 fn default_port() -> u16 {

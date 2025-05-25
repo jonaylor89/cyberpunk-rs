@@ -139,7 +139,11 @@ impl S3Storage {
 
     pub fn get_full_path(&self, key: &str) -> String {
         let safe_key = normalize(key, &self.safe_chars);
-        format!("{}/{}", self.path_prefix, safe_key)
+        if self.path_prefix.ends_with('/') {
+            format!("{}{}", self.path_prefix, safe_key)
+        } else {
+            format!("{}/{}", self.path_prefix, safe_key)
+        }
     }
 }
 

@@ -1,5 +1,5 @@
 
-FROM lukemathwalker/cargo-chef:latest-rust-1.59.0 as chef
+FROM lukemathwalker/cargo-chef:latest-rust-1.83.0 AS chef
 
 WORKDIR /app
 
@@ -27,12 +27,12 @@ RUN cargo build --release --bin cyberpunk
 
 # ----------------------------
 
-FROM debian:bullseye-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 
 RUN apt-get update -y \
-    && apt-get install -y --no-install-recommends openssl ca-certificates ffmpeg \
+    && apt-get install -y --no-install-recommends openssl ca-certificates ffmpeg curl \
     # Clean up
     && apt-get autoremove -y \
     && apt-get clean -y \
@@ -40,7 +40,14 @@ RUN apt-get update -y \
 
 COPY --from=builder /app/target/release/cyberpunk cyberpunk
 
-COPY configuration configuration
-ENV APP_ENVIRONMENT production
+COPY config config
+ENV APP_ENVIRONMENT=production
+
+# Cloud Run expects the app to listen on 0.0.0.0:$PORT
+ENV APP_APPLICATION__HOST=0.0.0.0
+
+# Health check for Cloud Run
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
 ENTRYPOINT ["./cyberpunk"]
