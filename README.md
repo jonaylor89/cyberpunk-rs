@@ -1,6 +1,6 @@
-# Cyberpunk-rs
+# Cyberpunk
 
-Advanced Audio Processing Server written in Rust
+Advanced Audio Processing Server for on the fly audio manipulation
 
 ![GitHub](https://img.shields.io/github/license/jonaylor89/cyberpunk-rs?logo=MIT) ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/jonaylor89/cyberpunk-rs/Docker)
 

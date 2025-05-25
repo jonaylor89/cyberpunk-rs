@@ -6,11 +6,10 @@ application:
 
 storage:
   # Primary: Cloud Storage (pay-per-use, auto-cleanup)
-  path_prefix: "testdata/"
+  path_prefix: "testdata"
   client:
     GCS:
-      bucket: "${APP_STORAGE__CLIENT__GCS__BUCKET}"
-      # credentials: Auto-detected from Cloud Run service account
+      bucket: "cyberpunk-341504-cyberpunk-audio"
 
 processor:
   concurrency: 2        # Match Cloud Run CPU allocation

@@ -27,7 +27,7 @@ RUN cargo build --release --bin cyberpunk
 
 # ----------------------------
 
-FROM debian:bullseye-slim AS runtime
+FROM debian:bookworm-slim AS runtime
 
 WORKDIR /app
 

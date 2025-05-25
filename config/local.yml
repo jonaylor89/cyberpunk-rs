@@ -14,4 +14,4 @@ processor:
   max_cache_size: 0
 cache:
   filesystem:
-    base_dir: /Users/johannes/Repos/cyberpunk-rs/cache
+    base_dir: /Users/johannes/Repos/cyberpunk-rs/req_cache

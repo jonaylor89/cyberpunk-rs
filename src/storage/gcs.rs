@@ -8,6 +8,7 @@ use google_cloud_storage::http::objects::delete::DeleteObjectRequest;
 use google_cloud_storage::http::objects::download::Range;
 use google_cloud_storage::http::objects::get::GetObjectRequest;
 use google_cloud_storage::http::objects::upload::{Media, UploadObjectRequest, UploadType};
+use tracing::debug;
 
 #[derive(Clone)]
 pub struct GCloudStorage {
@@ -25,6 +26,7 @@ impl AudioStorage for GCloudStorage {
     #[tracing::instrument(skip(self))]
     async fn get(&self, key: &str) -> Result<AudioBuffer> {
         let full_path = self.get_full_path(key);
+        debug!("GCS get: {}", full_path);
         let buffer = self
             .client
             .download_object(
@@ -43,6 +45,7 @@ impl AudioStorage for GCloudStorage {
     #[tracing::instrument(skip(self, blob))]
     async fn put(&self, key: &str, blob: &AudioBuffer) -> Result<()> {
         let full_path = self.get_full_path(key);
+        debug!("GCS set: {}", full_path);
         let upload_type = UploadType::Simple(Media::new(full_path));
         let blob_data = blob.as_ref().to_vec();
         self.client
@@ -62,6 +65,7 @@ impl AudioStorage for GCloudStorage {
     #[tracing::instrument(skip(self))]
     async fn delete(&self, key: &str) -> Result<()> {
         let full_path = self.get_full_path(key);
+        debug!("GCS delete: {}", full_path);
         self.client
             .delete_object(&DeleteObjectRequest {
                 bucket: self.bucket.clone(),
@@ -98,6 +102,10 @@ impl GCloudStorage {
 
     pub fn get_full_path(&self, key: &str) -> String {
         let safe_key = normalize(key, &self.safe_chars);
-        format!("{}/{}", self.path_prefix, safe_key)
+        if self.path_prefix.ends_with('/') {
+            format!("{}{}", self.path_prefix, safe_key)
+        } else {
+            format!("{}/{}", self.path_prefix, safe_key)
+        }
     }
 }

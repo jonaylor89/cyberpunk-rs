@@ -176,19 +176,23 @@ curl https://your-app.run.app/health
 
 ### Common Issues
 
-1. **Memory Limits**
+1. **SSL Library Errors** (`libssl.so.3: cannot open shared object file`)
+   - Fixed by using `debian:bookworm-slim` runtime image
+   - Bookworm includes OpenSSL 3.x required by newer Rust builds
+
+2. **Memory Limits**
    - Increase memory allocation for large audio files
    - Optimize caching settings in production.yml
 
-2. **Timeout Issues**
+3. **Timeout Issues**
    - Increase timeout for long audio processing
    - Consider async processing for very large files
 
-3. **Storage Issues**
+4. **Storage Issues**
    - Ensure Cloud Storage permissions are correct
    - Check bucket exists and is accessible
 
-4. **MCP Connection Issues**
+5. **MCP Connection Issues**
    - Verify cyberpunk server is accessible
    - Check network connectivity
    - Validate server URL format
