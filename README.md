@@ -180,7 +180,6 @@ storage:
     # Or Google Cloud Storage Configuration
     GCS:
       bucket: "my-gcs-bucket"
-      credentials: "my-credentials"  # GCS credentials
 ```
 
 #### Processor Settings
