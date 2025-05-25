@@ -40,7 +40,6 @@ SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --form
 echo ""
 echo "✅ Deployment complete!"
 echo "🌐 Service URL: $SERVICE_URL"
-echo "💰 Cost: $0 when idle, scales automatically"
 echo ""
 echo "Test your deployment:"
 echo "curl $SERVICE_URL/health"
