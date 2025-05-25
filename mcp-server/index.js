@@ -311,5 +311,8 @@ class CyberpunkMCPServer {
   }
 }
 
-const server = new CyberpunkMCPServer();
-server.run().catch(console.error);
+// Only start the server if this file is run directly (not imported/checked)
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const server = new CyberpunkMCPServer();
+  server.run().catch(console.error);
+}

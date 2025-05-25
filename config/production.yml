@@ -1,3 +1,32 @@
 
+# Ultra-cost-optimized production config
+# Idle cost: $0/month, scales to zero
 application:
   host: 0.0.0.0
+  port: 8080
+  # base_url will be auto-detected from Cloud Run
+
+storage:
+  # Primary: Cloud Storage (pay-per-use, auto-cleanup)
+  path_prefix: "audio/"
+  client:
+    GCS:
+      bucket: "${APP_STORAGE__CLIENT__GCS__BUCKET}"
+      # credentials: Auto-detected from Cloud Run service account
+
+processor:
+  concurrency: 2        # Match Cloud Run CPU allocation
+  max_cache_files: 30   # Small cache for minimal memory usage
+  max_cache_mem: 32     # MB - very conservative 
+  max_cache_size: 128   # MB - minimal cache size
+
+cache:
+  # Ephemeral filesystem cache (no external cache costs)
+  Filesystem:
+    base_dir: "/tmp/cyberpunk/cache"
+    # Note: Cache is lost on scale-down (acceptable for cost optimization)
+
+custom_tags:
+  env: production
+  platform: cloud-run
+  cost_model: scale-to-zero

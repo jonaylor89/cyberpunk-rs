@@ -8,9 +8,28 @@ Advanced Audio Processing Server written in Rust
 
 ## Quick Start
 
+### Local Development
+```sh
+cargo run
+```
+
+### Docker
 ```sh
 docker run -p 8080:8080 -e PORT=8080 ghcr.io/jonaylor89/cyberpunk:main
 ```
+
+### Google Cloud Run (One-click deploy)
+[![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?git_repo=https://github.com/jonaylor89/cyberpunk-rs)
+
+### MCP Integration (Connect to LLMs)
+```sh
+# Start server, then in another terminal:
+npx @cyberpunk-rs/mcp-server
+
+# Or connect to deployed server:
+npx @cyberpunk-rs/mcp-server --server=https://your-app.run.app
+```
+See [MCP_INTEGRATION.md](MCP_INTEGRATION.md) for Claude Desktop setup.
 
 Original audio test file:
 ```
