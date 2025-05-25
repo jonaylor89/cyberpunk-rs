@@ -1,6 +1,4 @@
 
-# Ultra-cost-optimized production config
-# Idle cost: $0/month, scales to zero
 application:
   host: 0.0.0.0
   port: 8080
@@ -8,7 +6,7 @@ application:
 
 storage:
   # Primary: Cloud Storage (pay-per-use, auto-cleanup)
-  path_prefix: "audio/"
+  path_prefix: "testdata/"
   client:
     GCS:
       bucket: "${APP_STORAGE__CLIENT__GCS__BUCKET}"
@@ -28,5 +26,3 @@ cache:
 
 custom_tags:
   env: production
-  platform: cloud-run
-  cost_model: scale-to-zero

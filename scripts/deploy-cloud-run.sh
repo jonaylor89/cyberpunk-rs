@@ -13,7 +13,7 @@ echo ""
 
 # Setup minimal infrastructure first
 echo "🏗️  Setting up minimal infrastructure..."
-./infrastructure/setup-minimal-infrastructure.sh $PROJECT_ID $REGION
+./scripts/setup-infra.sh $PROJECT_ID $REGION
 
 BUCKET_NAME="${PROJECT_ID}-cyberpunk-audio"
 
