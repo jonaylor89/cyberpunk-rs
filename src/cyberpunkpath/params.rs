@@ -432,7 +432,7 @@ impl Params {
             }
         }
         if let Some(true) = self.normalize {
-            let level = self.normalize_level.unwrap_or(0.0);
+            let level = self.normalize_level.unwrap_or(-16.0);
             filters.push(format!("loudnorm=I={:.1}", level));
         }
         if let Some(freq) = self.lowpass {

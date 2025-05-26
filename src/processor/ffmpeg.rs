@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-
+use tracing::debug;
 use color_eyre::Result;
 use tempfile::TempDir;
 use tokio::process::Command;
@@ -48,6 +48,8 @@ pub async fn process_audio(
     // Add encoding parameters and output path
     cmd.args(params.to_ffmpeg_args())
         .arg(output_path.to_str().unwrap());
+
+    debug!(?cmd, "Executing FFmpeg command");
 
     // Execute FFmpeg
     let status = cmd.status().await?;
