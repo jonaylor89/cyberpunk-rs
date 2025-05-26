@@ -13,6 +13,7 @@ use std::time::Duration;
 use tracing::debug;
 
 const CACHE_KEY_PREFIX: &str = "req_cache:";
+const META_CACHE_KEY_PREFIX: &str = "meta_cache:";
 const CACHE_TTL: Duration = Duration::from_secs(3600); // 1 hour
 
 #[tracing::instrument(skip(state, req, next))]
@@ -24,7 +25,14 @@ pub async fn cache_middleware(
 ) -> Result<impl IntoResponse, (StatusCode, String)> {
     let params_hash = suffix_result_storage_hasher(&params);
 
-    let cache_key = format!("{}:{}:{}", CACHE_KEY_PREFIX, req.method(), params_hash);
+    let path = params.to_string();
+    let cache_key_prefix = if path.starts_with("/meta") {
+        META_CACHE_KEY_PREFIX
+    } else {
+        CACHE_KEY_PREFIX
+    };
+
+    let cache_key = format!("{}:{}:{}", cache_key_prefix, req.method(), params_hash);
 
     debug!("Cache key: {}", cache_key);
     let cache_response = state.cache.get(&cache_key).await.map_err(|e| {
@@ -136,6 +144,7 @@ pub async fn auth_middleware(
     let hash = req
         .uri()
         .path()
+        .trim_start_matches("/meta")
         .strip_prefix("/")
         .and_then(|s| s.split("/").next())
         .ok_or((StatusCode::BAD_REQUEST, format!("Failed to parse URI hash")))?;

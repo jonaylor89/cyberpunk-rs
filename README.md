@@ -118,6 +118,29 @@ curl "http://localhost:8080/params/unsafe/celtic_pt2.mp3?reverse=true&fade_in=1"
 }
 ```
 
+### Audio Metadata with `/meta`
+
+You can extract audio metadata by adding `/meta` before the endpoint:
+
+```sh
+curl "http://localhost:8080/meta/unsafe/celtic_pt2.mp3"
+
+{
+  "format": "mp3",
+  "duration": 27.4808,
+  "bit_rate": 161192,
+  "sample_rate": 44100,
+  "channels": 2,
+  "codec": "mp3",
+  "size": 553712,
+  "tags": {
+    "iTunSMPB": "...",
+    "TSS": "Logic Pro X 10.3.3",
+    "iTunNORM": "..."
+  }
+}
+```
+
 ## Storage Options
 
 Cyberpunk supports multiple storage backends:
