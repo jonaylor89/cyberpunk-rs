@@ -37,7 +37,9 @@ where
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         // Access the URI and perform your custom parsing logic
         let uri = &parts.uri;
-        let path = uri.path().trim_start_matches("/params");
+        let path = uri.path()
+            .trim_start_matches("/params")
+            .trim_start_matches("/meta");
 
         // Parse query string into a HashMap
         let query_params_string = uri.query().unwrap_or("");

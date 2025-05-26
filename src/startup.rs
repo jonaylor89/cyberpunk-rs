@@ -7,6 +7,7 @@ use crate::middleware::cache_middleware;
 use crate::processor::processor::{AudioProcessor, Processor};
 use crate::routes::cyberpunkpath::cyberpunkpath_handler;
 use crate::routes::health::health_check;
+use crate::routes::meta::meta_handler;
 use crate::routes::params::params;
 use crate::routes::root::root_handler;
 use crate::state::AppStateDyn;
@@ -139,6 +140,7 @@ where
         .nest(
             "/",
             Router::new()
+                .route("/meta/*cyberpunkpath", get(meta_handler))
                 .route("/*cyberpunkpath", get(cyberpunkpath_handler))
                 .route_layer(middleware::from_fn_with_state(
                     state.clone(),

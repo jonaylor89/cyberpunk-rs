@@ -152,6 +152,20 @@ class CyberpunkMCPServer {
             },
           },
           {
+            name: "get_audio_metadata",
+            description: "Extract metadata from an audio file including format, duration, bitrate, sample rate, channels, codec, and ID3 tags",
+            inputSchema: {
+              type: "object",
+              properties: {
+                audio_url: {
+                  type: "string",
+                  description: "URL to the audio file to analyze",
+                },
+              },
+              required: ["audio_url"],
+            },
+          },
+          {
             name: "get_server_health",
             description: "Check if the cyberpunk audio server is running and healthy",
             inputSchema: {
@@ -172,6 +186,8 @@ class CyberpunkMCPServer {
             return await this.processAudio(args);
           case "preview_audio_params":
             return await this.previewParams(args);
+          case "get_audio_metadata":
+            return await this.getAudioMetadata(args);
           case "get_server_health":
             return await this.getServerHealth();
           default:
@@ -282,6 +298,51 @@ class CyberpunkMCPServer {
       };
     } catch (error) {
       throw new Error(`Failed to preview parameters: ${error.message}`);
+    }
+  }
+
+  async getAudioMetadata(args) {
+    const { audio_url } = args;
+    const url = `${DEFAULT_SERVER_URL}/meta/unsafe/${encodeURIComponent(audio_url)}`;
+
+    try {
+      const response = await axios.get(url, {
+        timeout: 15000,
+      });
+      
+      const metadata = response.data;
+      
+      // Format the metadata nicely for display
+      let metadataText = `Audio metadata for ${audio_url}:\\n\\n`;
+      metadataText += `📄 **Format**: ${metadata.format}\\n`;
+      metadataText += `⏱️ **Duration**: ${metadata.duration ? metadata.duration.toFixed(2) + ' seconds' : 'Unknown'}\\n`;
+      metadataText += `📊 **Sample Rate**: ${metadata.sample_rate ? metadata.sample_rate + ' Hz' : 'Unknown'}\\n`;
+      metadataText += `🔊 **Channels**: ${metadata.channels || 'Unknown'}\\n`;
+      metadataText += `🎵 **Codec**: ${metadata.codec || 'Unknown'}\\n`;
+      metadataText += `💾 **Bit Rate**: ${metadata.bit_rate ? metadata.bit_rate + ' bps' : 'Unknown'}\\n`;
+      metadataText += `📦 **File Size**: ${metadata.size ? (metadata.size / 1024 / 1024).toFixed(2) + ' MB' : 'Unknown'}\\n`;
+      
+      if (metadata.tags && Object.keys(metadata.tags).length > 0) {
+        metadataText += `\\n🏷️ **Tags**:\\n`;
+        for (const [key, value] of Object.entries(metadata.tags)) {
+          metadataText += `  • **${key}**: ${value}\\n`;
+        }
+      }
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: metadataText,
+          },
+          {
+            type: "text",
+            text: `\\n**Raw metadata JSON**:\\n\`\`\`json\\n${JSON.stringify(metadata, null, 2)}\\n\`\`\``,
+          },
+        ],
+      };
+    } catch (error) {
+      throw new Error(`Failed to get audio metadata: ${error.message}`);
     }
   }
 
